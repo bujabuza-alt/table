@@ -15,7 +15,7 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif; background
 #wrap { display: flex; flex-direction: column; width: 100%; height: 100%; }
 #hd   { flex-shrink: 0; background: #fff; border-bottom: 1px solid #e2e8f0; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 #tb   { flex-shrink: 0; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; padding: 0 12px; gap: 4px; }
-#body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+#body { flex: 1; display: flex; overflow: hidden; min-height: 0; position: relative; }
 
 /* 헤더 */
 .hd-left  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -44,8 +44,8 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif; background
 .wi-memo { font-size: 11px; color: #94a3b8; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 메인 */
-#main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; min-width: 0; }
-#rv   { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: none; flex-direction: column; gap: 10px; min-width: 0; }
+#main { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; }
+#rv { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: none; flex-direction: column; gap: 10px; }
 #rv.on { display: flex; }
 
 /* 범례 */
@@ -55,7 +55,7 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif; background
 
 /* 캔버스 */
 #cv  { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; width: 100%; overflow: hidden; }
-#cvi { position: absolute; inset: 0; }
+#cvi { position: absolute; inset: 0; overflow: hidden; }
 #edbanner { display: none; position: absolute; top: 0; left: 0; right: 0; background: rgba(99,102,241,0.12); border-bottom: 2px dashed #6366f1; padding: 6px; font-size: 12px; color: #6366f1; font-weight: 700; text-align: center; z-index: 5; }
 #cv.em #edbanner { display: block; }
 #cv.em { border: 2px dashed #6366f1; }
@@ -231,15 +231,15 @@ textarea.fi { resize: none; min-height: 60px; }
 <script>
 var SK = 'tv5';
 var IT = [
-  {id:1,n:"1번",t:"4인",c:4,px:2,py:3},
-  {id:2,n:"2번",t:"4인",c:4,px:35,py:3},
-  {id:3,n:"3번",t:"4인",c:4,px:68,py:3},
-  {id:4,n:"4번",t:"4인",c:4,px:68,py:36},
-  {id:5,n:"5번",t:"4인",c:4,px:68,py:62},
-  {id:6,n:"6번",t:"2인",c:2,px:68,py:84},
-  {id:7,n:"바1",t:"바",c:2,px:2,py:37},
-  {id:8,n:"바2",t:"바",c:2,px:2,py:58},
-  {id:9,n:"바3",t:"바",c:2,px:2,py:79}
+  {id:1,n:"1번",t:"4인",c:4,px:2, py:5 },
+  {id:2,n:"2번",t:"4인",c:4,px:35,py:5 },
+  {id:3,n:"3번",t:"4인",c:4,px:68,py:5 },
+  {id:4,n:"4번",t:"4인",c:4,px:68,py:32},
+  {id:5,n:"5번",t:"4인",c:4,px:68,py:58},
+  {id:6,n:"6번",t:"2인",c:2,px:68,py:80},
+  {id:7,n:"바1",t:"바", c:2,px:2, py:35},
+  {id:8,n:"바2",t:"바", c:2,px:2, py:56},
+  {id:9,n:"바3",t:"바", c:2,px:2, py:77}
 ];
 function ft(t){ return {id:t.id,n:t.n,t:t.t,c:t.c,px:t.px,py:t.py,st:'empty',g:0,seatTime:null,res:null}; }
 
@@ -325,7 +325,7 @@ function switchTab(t){
   document.getElementById('t1').className = 'tab'+(t==='floor'?' on':'');
   document.getElementById('t2').className = 'tab'+(t==='reserve'?' on':'');
   document.getElementById('sb').style.display   = t==='floor' ? '' : 'none';
-  document.getElementById('main').style.display = t==='floor' ? '' : 'none';
+  document.getElementById('main').style.display = t==='floor' ? 'flex' : 'none';
   document.getElementById('rv').style.display   = t==='reserve' ? 'flex' : 'none';
   document.getElementById('bedit').style.display= t==='floor' ? '' : 'none';
   if(t==='floor') rAll(); else rRv();
@@ -338,7 +338,7 @@ function rCanvas(){
   var W = panel.offsetWidth;
   if(!W){ setTimeout(rCanvas,50); return; }
   var H = Math.round(W * 0.75);
-  panel.style.height = H + 'px';
+  if(parseInt(panel.style.height)!==H) panel.style.height = H + 'px';
 
   S.tables.forEach(function(tb){
     var card = document.getElementById('tc'+tb.id);
@@ -350,7 +350,9 @@ function rCanvas(){
     }
     card.className = 'tc'+(tb.t==="바"?' bar':'')+(card.classList.contains('drag')?' drag':'');
     var c=col(tb.st,tb.seatTime), sz=csz(tb.t,W,H);
-    var x=Math.round(tb.px/100*W), y=Math.round(tb.py/100*H);
+    var sz2=csz(tb.t,W,H);
+    var x=Math.max(0,Math.min(W-sz2.w,Math.round(tb.px/100*W)));
+    var y=Math.max(0,Math.min(H-sz2.h,Math.round(tb.py/100*H)));
     card.style.left=x+'px'; card.style.top=y+'px';
     card.style.width=sz.w+'px'; card.style.height=sz.h+'px';
     card.style.background=c.bg; card.style.borderColor=c.bd;
