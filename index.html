@@ -10,7 +10,8 @@
 <title>테이블 현황</title>
 <style>
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; overflow:hidden; background:#f1f5f9; font-family:'Apple SD Gothic Neo','Pretendard',-apple-system,sans-serif; color:#1e293b; user-select:none; -webkit-user-select:none; }
+html { height:100%; height:-webkit-fill-available; }
+body { min-height:100%; min-height:-webkit-fill-available; overflow:hidden; background:#f1f5f9; font-family:'Apple SD Gothic Neo','Pretendard',-apple-system,sans-serif; color:#1e293b; user-select:none; -webkit-user-select:none; }
 
 /* ── 헤더 ── */
 #header { position:fixed; top:0; left:0; right:0; height:56px; z-index:300; background:#fff; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; padding:0 14px; box-shadow:0 1px 6px rgba(0,0,0,0.07); }
@@ -27,7 +28,7 @@ html, body { height:100%; overflow:hidden; background:#f1f5f9; font-family:'Appl
 .tab-btn.active { background:#3b82f6; color:#fff; }
 
 /* ── 앱 레이아웃 ── */
-#app { display:flex; height:100vh; padding-top:102px; }
+#app { display:flex; height:calc(100vh - 102px); height:calc(100dvh - 102px); margin-top:102px; }
 
 /* ── 사이드바 ── */
 #sidebar { width:196px; flex-shrink:0; background:#fff; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; }
@@ -119,6 +120,7 @@ html, body { height:100%; overflow:hidden; background:#f1f5f9; font-family:'Appl
 .rv-status-badge { font-size:11px; font-weight:700; border-radius:6px; padding:3px 8px; flex-shrink:0; }
 
 /* ── 모달 ── */
+#modal-root:empty { display:none; pointer-events:none; }
 .overlay { position:fixed; inset:0; background:rgba(15,23,42,0.5); z-index:500; display:flex; align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
 .modal { background:#fff; border-radius:20px; padding:20px 20px 16px; width:100%; max-width:380px; box-shadow:0 24px 64px rgba(0,0,0,0.22); }
 .modal-lg { max-width:440px; }
