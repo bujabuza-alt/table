@@ -243,8 +243,13 @@ textarea.fi { resize: none; min-height: 80px; }
 </div>
 
 <div id="mo"><div class="md" id="mdc"></div></div>
-
-<script>// ── 상수 ──────────────────────────────────────────────────
+/* 태그 UI 스타일 추가 */
+.tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.tag-btn { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; color: #64748b; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.tag-btn.on { background: #eff6ff; border-color: #3b82f6; color: #3b82f6; }
+.t-chip { display: inline-block; padding: 4px 8px; border-radius: 6px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; margin-right: 6px; margin-top: 4px; border: 1px solid #e2e8f0; }
+<script>// 
+// ── 상수 ──────────────────────────────────────────────────
 var STORAGE_KEY = 'tv5';
 
 var INIT_TABLES = [
@@ -258,6 +263,8 @@ var INIT_TABLES = [
   {id:8,n:"바2",t:"바", c:2,px:2, py:56},
   {id:9,n:"바3",t:"바", c:2,px:2, py:77}
 ];
+
+var TAG_LIST = ['회식', '기념일', '생일', '코스(일반)', '코스(한우)'];
 
 // ── 상태 ──────────────────────────────────────────────────
 var S = { tables: [], waits: [], ress: [] };
@@ -273,6 +280,7 @@ var gvWait  = 2;
 var gvRes   = 2;
 var gvRvAdd = 2;
 var gvRvEdit= 2;
+var gvTags  = []; // 현재 선택된 태그 배열
 var activeResTableId = null;
 
 var dragOffset = {x:0, y:0};
@@ -354,7 +362,7 @@ function dlabel(s) {
 function tableColor(st, seatTime, isLinked) {
   if (st === 'empty')    return {bg:'#f8fafc', bd:'#cbd5e1', tx:'#94a3b8'};
   if (st === 'reserved') return {bg:'#eff6ff', bd:'#3b82f6', tx:'#1d4ed8'};
-  if (isLinked)          return {bg:'#f0fdf4', bd:'#22c55e', tx:'#15803d'}; // 연결된 테이블 색상
+  if (isLinked)          return {bg:'#f0fdf4', bd:'#22c55e', tx:'#15803d'}; 
   var elapsed = Date.now() - seatTime;
   if (elapsed < 3600000) return {bg:'#fefce8', bd:'#ca8a04', tx:'#78350f'};
   if (elapsed < 5400000) return {bg:'#fff7ed', bd:'#ea580c', tx:'#7c2d12'};
@@ -364,6 +372,35 @@ function cardSize(type, W, H) {
   if (type === "바")  return {w:Math.round(W*.28), h:Math.round(H*.115)};
   if (type === "2인") return {w:Math.round(W*.28), h:Math.round(H*.19)};
   return                    {w:Math.round(W*.28), h:Math.round(H*.21)};
+}
+
+// ── 태그 헬퍼 ─────────────────────────────────────────────
+function renderTagBtns(selected) {
+  return TAG_LIST.map(function(t) {
+    var isOn = selected.indexOf(t) > -1 ? ' on' : '';
+    return '<button class="tag-btn'+isOn+'" data-tag="'+t+'">'+t+'</button>';
+  }).join('');
+}
+function bindTags(containerId) {
+  var container = document.getElementById(containerId);
+  if(!container) return;
+  container.querySelectorAll('.tag-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var t = this.getAttribute('data-tag');
+      var idx = gvTags.indexOf(t);
+      if (idx > -1) {
+        gvTags.splice(idx, 1);
+        this.classList.remove('on');
+      } else {
+        gvTags.push(t);
+        this.classList.add('on');
+      }
+    });
+  });
+}
+function renderTagChips(tags) {
+  if(!tags || !tags.length) return '';
+  return '<div style="margin-top:2px">' + tags.map(function(t){ return '<span class="t-chip">#'+esc(t)+'</span>'; }).join('') + '</div>';
 }
 
 // ── 헤더 / 통계 ───────────────────────────────────────────
@@ -532,10 +569,9 @@ function bindCard(card, tid) {
       saveData();
       return;
     }
-    // 짧은 탭 처리
     if (Date.now() - tapAt < 280) {
-      if (editMode) openTableConfig(tid); // 편집 모드: 테이블 설정
-      else openTableModal(tid);           // 일반 모드: 착석/퇴석
+      if (editMode) openTableConfig(tid);
+      else openTableModal(tid);
     }
   });
 
@@ -558,13 +594,11 @@ function bindCard(card, tid) {
   });
 
   card.addEventListener('click', function() {
-    // 마우스 환경에서의 클릭 처리 (터치와 중복 방지)
     if (editMode) openTableConfig(tid);
     else openTableModal(tid);
   });
 }
 
-// ── 드래그 로직 생략 부분 없음 ────────────────────────────
 function startDrag(card, tid, cx, cy) {
   var r = card.getBoundingClientRect();
   dragOffset = {x: cx - r.left, y: cy - r.top};
@@ -654,6 +688,7 @@ function renderWaitList() {
       +   '<span>대기 '+fmtElapsed(Date.now()-w.since)+'</span>'
       +   (w.time ? '<span>'+esc(w.time)+'</span>' : '')
       + '</div>'
+      + renderTagChips(w.tags)
       + (w.memo ? '<div class="wi-memo">📝'+esc(w.memo)+'</div>' : '')
       + '</div>';
   }).join('');
@@ -667,6 +702,7 @@ function renderWaitList() {
 
 function openWaitModal() {
   gvWait = 2;
+  gvTags = []; // 모달 열 때 태그 초기화
   var now2 = new Date();
   var nt = pad(now2.getHours()) + ':' + pad(now2.getMinutes());
   showModal(
@@ -684,11 +720,13 @@ function openWaitModal() {
     +   '</div>'
     +   '<div class="fg"><label class="fl">접수 시간</label><input class="fi" id="wt" type="time" value="'+nt+'"></div>'
     + '</div>'
+    + '<div class="fg"><label class="fl">방문 목적 및 메뉴</label><div class="tags" id="wtags">'+renderTagBtns(gvTags)+'</div></div>'
     + '<div class="fg"><label class="fl">메모(선택)</label><textarea class="fi" id="wm" placeholder="특이사항…"></textarea></div>'
     + '<button class="ab" style="background:#3b82f6;width:100%" id="wsubmit">대기 등록</button>'
-    + '</div>', 'md-lg' // 큰 모달 클래스 적용
+    + '</div>', 'md-lg' 
   );
   bindGbs('wgbs', 'bl', function(n){ gvWait = n; });
+  bindTags('wtags');
   document.getElementById('wsubmit').addEventListener('click', function() {
     var nm = document.getElementById('wn').value.trim();
     if (!nm) { alert('이름을 입력하세요'); return; }
@@ -697,8 +735,9 @@ function openWaitModal() {
       id:    uid(),
       nm:    nm,
       g:     gvWait,
-      phone: pVal ? '010-' + pVal : '', // 010 자동 추가
+      phone: pVal ? '010-' + pVal : '', 
       time:  document.getElementById('wt').value,
+      tags:  gvTags.slice(),
       memo:  document.getElementById('wm').value,
       since: Date.now()
     });
@@ -724,6 +763,7 @@ function openSeatWaiter(wid) {
     + '<div class="ib" style="background:#f8fafc;border-color:#e2e8f0">'
     + '<div class="ir"><span class="il">대기 경과</span><span class="iv">'+fmtElapsed(Date.now()-w.since)+'</span></div>'
     + (w.phone ? '<div class="ir"><span class="il">연락처</span><span class="iv"><a href="tel:'+esc(w.phone)+'" style="color:#3b82f6;text-decoration:none">'+esc(w.phone)+'</a></span></div>' : '')
+    + (w.tags && w.tags.length ? '<div class="ir"><span class="il">태그</span><span class="iv" style="text-align:right">'+renderTagChips(w.tags)+'</span></div>' : '')
     + (w.memo  ? '<div class="ir"><span class="il">메모</span><span class="iv" style="text-align:right;max-width:160px">'+esc(w.memo)+'</span></div>' : '')
     + '</div>'
     + '<p style="font-size:13px;color:#64748b;margin-bottom:9px">착석할 메인 테이블을 선택하세요</p>'
@@ -774,13 +814,10 @@ function openTableModal(tid) {
   if (editMode) return;
   var tb = S.tables.filter(function(t){ return t.id === tid; })[0];
   if (!tb) return;
-  
-  // 만약 연결된(묶인) 서브 테이블을 클릭했다면, 메인 테이블 모달을 염
   if (tb.linkTo) {
       var mainTb = S.tables.filter(function(t){ return t.id === tb.linkTo; })[0];
       if (mainTb) tb = mainTb;
   }
-
   gvFloor = tb.g || 2;
   if      (tb.st === 'occupied') showOccupied(tb);
   else if (tb.st === 'reserved') showReserved(tb);
@@ -819,7 +856,6 @@ function showOccupied(tb) {
   var c = tableColor(tb.st, tb.seatTime, false);
   var elapsed = Date.now() - tb.seatTime;
   
-  // 묶인 테이블 확인
   var linked = S.tables.filter(function(t){ return t.linkTo === tb.id; });
   var linkHtml = '';
   if (linked.length > 0) {
@@ -841,7 +877,6 @@ function showOccupied(tb) {
     + '<button class="ab" style="background:#ef4444;width:100%" id="bclr">퇴석 처리</button>'
   );
 
-  // 인원수 수정
   document.getElementById('bmodg').addEventListener('click', function() {
     var n = prompt('현재 착석 인원수를 입력하세요:', tb.g);
     if (n && !isNaN(n)) {
@@ -851,7 +886,6 @@ function showOccupied(tb) {
     }
   });
 
-  // 테이블 붙이기 (단체 그룹화)
   document.getElementById('blink').addEventListener('click', function() {
     closeModal();
     var avail = S.tables.filter(function(t){ return t.st === 'empty' && !t.linkTo && t.id !== tb.id; });
@@ -874,7 +908,6 @@ function showOccupied(tb) {
     });
   });
 
-  // 퇴석 시 묶인 테이블도 한 번에 비움
   document.getElementById('bclr').addEventListener('click', function() {
     S.tables = S.tables.map(function(t) {
       if (t.id === tb.id || t.linkTo === tb.id) {
@@ -895,6 +928,7 @@ function showReserved(tb) {
     + '<div class="ir"><span class="il">인원</span><span class="iv">'+esc(String(r.g||''))+'명</span></div>'
     + '<div class="ir"><span class="il">시간</span><span class="iv">'+esc(r.time||'')+'</span></div>'
     + (r.phone ? '<div class="ir"><span class="il">연락처</span><span class="iv"><a href="tel:'+esc(r.phone)+'" style="color:#3b82f6;text-decoration:none">'+esc(r.phone)+'</a></span></div>' : '')
+    + (r.tags && r.tags.length ? '<div class="ir"><span class="il">태그</span><span class="iv" style="text-align:right">'+renderTagChips(r.tags)+'</span></div>' : '')
     + (r.memo  ? '<div class="ir"><span class="il">메모</span><span class="iv" style="text-align:right;max-width:160px">'+esc(r.memo)+'</span></div>' : '')
     + '</div>'
     + '<div class="abs">'
@@ -923,6 +957,7 @@ function showReserved(tb) {
 function openResModal(tid) {
   activeResTableId = tid;
   gvRes = 2;
+  gvTags = []; // 모달 열 때 초기화
   var tb = S.tables.filter(function(t){ return t.id === tid; })[0];
   if (gvRes > tb.c) gvRes = tb.c;
   showModal(
@@ -939,11 +974,13 @@ function openResModal(tid) {
     +   '<div class="fg"><label class="fl">예약 시간</label><input class="fi" id="rt" type="time" value="18:00"></div>'
     + '</div>'
     + '<div class="fg"><label class="fl">연락처(선택)</label><div class="prefix-input"><span>010 - </span><input id="rp" type="tel" placeholder="1234-5678" maxlength="9"></div></div>'
+    + '<div class="fg"><label class="fl">방문 목적 및 메뉴</label><div class="tags" id="rntags">'+renderTagBtns(gvTags)+'</div></div>'
     + '<div class="fg"><label class="fl">메모(선택)</label><textarea class="fi" id="rm" placeholder="알레르기, 특별 요청 등…"></textarea></div>'
     + '<button class="ab" style="background:#8b5cf6;width:100%" id="rsubmit">예약 등록</button>'
     + '</div>', 'md-lg'
   );
   bindGbs('rgbs', 'pu', function(n){ gvRes = n; });
+  bindTags('rntags');
   document.getElementById('rsubmit').addEventListener('click', function() {
     var nm = document.getElementById('rn').value.trim();
     var rd = document.getElementById('rd').value;
@@ -952,7 +989,7 @@ function openResModal(tid) {
     var pVal  = document.getElementById('rp').value.trim();
     var phone = pVal ? '010-' + pVal : '';
     var memo  = document.getElementById('rm').value;
-    var resObj = {name:nm, g:gvRes, time:rt, date:rd, phone:phone, memo:memo};
+    var resObj = {name:nm, g:gvRes, time:rt, date:rd, phone:phone, memo:memo, tags:gvTags.slice()};
     S.tables = S.tables.map(function(t) {
       return t.id === activeResTableId
         ? Object.assign({}, t, {st:'reserved', res:resObj})
@@ -965,6 +1002,7 @@ function openResModal(tid) {
       date:  rd,
       time:  rt,
       g:     gvRes,
+      tags:  gvTags.slice(),
       memo:  memo,
       st:    'confirmed',
       tableId: activeResTableId
@@ -1032,6 +1070,7 @@ function renderRvList() {
           + '<div class="rvi-b">'
           +   '<div class="rvi-n">'+esc(r.nm)+'</div>'
           +   '<div class="rvi-s">'+(r.date ? dlabel(r.date)+' ' : '')+esc(String(r.g))+'명'+(r.phone?' · '+esc(r.phone):'')+'</div>'
+          +   renderTagChips(r.tags)
           +   (r.memo ? '<div class="rvi-m">📝'+esc(r.memo)+'</div>' : '')
           + '</div>'
           + '<div class="rvi-st" style="color:'+s[0]+';background:'+s[1]+'">'+s[2]+'</div>'
@@ -1046,6 +1085,7 @@ function renderRvList() {
 
 function openAddRv() {
   gvRvAdd = 2;
+  gvTags = []; // 모달 열 때 초기화
   var df = calSel || today();
   showModal(
     '<div class="md-hd"><span class="md-title">예약 추가</span><button class="md-x" id="mxbtn">×</button></div>'
@@ -1063,6 +1103,7 @@ function openAddRv() {
           return '<button class="gb'+(n===2?' gr':'')+'" data-n="'+n+'">'+n+'</button>';
         }).join('')
     + '</div></div>'
+    + '<div class="fg"><label class="fl">방문 목적 및 메뉴</label><div class="tags" id="avtags">'+renderTagBtns(gvTags)+'</div></div>'
     + '<div class="fg"><label class="fl">메모</label><textarea class="fi" id="avm" placeholder="알레르기, 특별 요청 등…"></textarea></div>'
     + '<div class="fg"><label class="fl">상태</label>'
     +   '<select class="fi" id="avs"><option value="confirmed">확정</option><option value="pending">대기</option></select>'
@@ -1071,6 +1112,7 @@ function openAddRv() {
     + '</div>', 'md-lg'
   );
   bindGbs('rvgbs', 'gr', function(n){ gvRvAdd = n; });
+  bindTags('avtags');
   document.getElementById('avsubmit').addEventListener('click', function() {
     var nm = document.getElementById('avn').value.trim();
     var d  = document.getElementById('avd').value;
@@ -1084,6 +1126,7 @@ function openAddRv() {
       date:  d,
       time:  t,
       g:     gvRvAdd,
+      tags:  gvTags.slice(),
       memo:  document.getElementById('avm').value,
       st:    document.getElementById('avs').value
     });
@@ -1103,6 +1146,7 @@ function openRvDetail(rid) {
     + '<div class="ir"><span class="il">시간</span><span class="iv">'+esc(r.time)+'</span></div>'
     + '<div class="ir"><span class="il">인원</span><span class="iv">'+esc(String(r.g))+'명</span></div>'
     + (r.phone ? '<div class="ir"><span class="il">연락처</span><span class="iv"><a href="tel:'+esc(r.phone)+'" style="color:#3b82f6;text-decoration:none">'+esc(r.phone)+'</a></span></div>' : '')
+    + (r.tags && r.tags.length ? '<div class="ir"><span class="il">태그</span><span class="iv" style="text-align:right">'+renderTagChips(r.tags)+'</span></div>' : '')
     + (r.memo  ? '<div class="ir"><span class="il">메모</span><span class="iv" style="text-align:right;max-width:160px">'+esc(r.memo)+'</span></div>' : '')
     + '<div class="ir"><span class="il">상태</span><span class="iv">'+sm[r.st]+'</span></div>'
     + '</div>'
@@ -1137,9 +1181,10 @@ function openEditRv(rid) {
   var r = S.ress.filter(function(x){ return x.id == rid; })[0];
   if (!r) return;
   gvRvEdit = r.g || 2;
+  gvTags = r.tags ? r.tags.slice() : []; // 기존 태그 불러오기
   
   var pRaw = r.phone || '';
-  if (pRaw.startsWith('010-')) pRaw = pRaw.substring(4); // 010 잘라내서 폼에 넣기
+  if (pRaw.startsWith('010-')) pRaw = pRaw.substring(4); 
 
   showModal(
     '<div class="md-hd"><span class="md-title">예약 수정</span><button class="md-x" id="mxbtn">×</button></div>'
@@ -1157,6 +1202,7 @@ function openEditRv(rid) {
           return '<button class="gb'+(n===gvRvEdit?' gr':'')+'" data-n="'+n+'">'+n+'</button>';
         }).join('')
     + '</div></div>'
+    + '<div class="fg"><label class="fl">방문 목적 및 메뉴</label><div class="tags" id="evtags">'+renderTagBtns(gvTags)+'</div></div>'
     + '<div class="fg"><label class="fl">메모</label><textarea class="fi" id="evm">'+esc(r.memo||'')+'</textarea></div>'
     + '<div class="fg"><label class="fl">상태</label>'
     +   '<select class="fi" id="evs">'
@@ -1169,6 +1215,7 @@ function openEditRv(rid) {
     + '</div>', 'md-lg'
   );
   bindGbs('rvgbs', 'gr', function(n){ gvRvEdit = n; });
+  bindTags('evtags');
   document.getElementById('evsubmit').addEventListener('click', function() {
     var nm = document.getElementById('evn').value.trim();
     var d  = document.getElementById('evd').value;
@@ -1180,7 +1227,7 @@ function openEditRv(rid) {
 
     S.ress = S.ress.map(function(x) {
       return x.id == rid
-        ? Object.assign({}, x, {nm:nm, phone:finalPhone, date:d, time:t, g:gvRvEdit, memo:document.getElementById('evm').value, st:document.getElementById('evs').value})
+        ? Object.assign({}, x, {nm:nm, phone:finalPhone, date:d, time:t, g:gvRvEdit, tags:gvTags.slice(), memo:document.getElementById('evm').value, st:document.getElementById('evs').value})
         : x;
     });
     closeModal(); saveData(); renderReservations();
@@ -1293,7 +1340,6 @@ window.addEventListener('resize', function() {
 document.addEventListener('visibilitychange', function() {
   if (document.hidden) localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
 });
-
 </script>
 </body>
 </html>
