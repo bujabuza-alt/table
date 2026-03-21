@@ -29,7 +29,9 @@ body {
 #wrap { display: flex; flex-direction: column; width: 100%; height: 100%; }
 #hd   { flex-shrink: 0; background: #fff; border-bottom: 1px solid #e2e8f0; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 #tb   { flex-shrink: 0; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; padding: 0 12px; gap: 4px; }
-#body { flex: 1; display: flex; overflow: hidden; min-height: 0; position: relative; }
+#body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+#content-area { flex: 1; position: relative; overflow: hidden; min-width: 0; min-height: 0; }
+#content-area { flex: 1; position: relative; overflow: hidden; min-width: 0; }
 
 .hd-left  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .hd-logo  { width: 32px; height: 32px; background: linear-gradient(135deg,#3b82f6,#6366f1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
@@ -213,6 +215,7 @@ textarea.fi { resize: none; min-height: 60px; }
       <div id="wl"><div style="padding:24px 12px;text-align:center;color:#cbd5e1;font-size:13px">대기자 없음</div></div>
     </div>
 
+    <div id="content-area">
     <div id="main">
       <div id="leg">
         <div class="ld"><div class="lc" style="background:#cbd5e1"></div>빈 테이블</div>
@@ -253,6 +256,7 @@ textarea.fi { resize: none; min-height: 60px; }
         <div id="rvlist"></div>
       </div>
     </div>
+    </div><!-- /#content-area -->
   </div>
 </div>
 
@@ -413,7 +417,7 @@ function switchTab(t) {
   var rvEl   = document.getElementById('rv');
 
   if (t === 'floor') {
-    mainEl.style.display = 'flex';
+    mainEl.style.display = '';   // CSS default (flex)
     rvEl.classList.remove('on');
     renderAll();
   } else {
@@ -476,7 +480,6 @@ function renderCanvas() {
     if (tb.t === "바") {
       html = '<div>'
         + '<div style="font-weight:800;font-size:12px">' + esc(tb.n) + '</div>'
-        + '<div style="font-size:10px;color:#94a3b8">바·2인</div>'
         + '</div>'
         + '<div style="text-align:right">';
       if (tb.st === 'occupied') {
@@ -492,7 +495,6 @@ function renderCanvas() {
       html = '<div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;margin-bottom:4px">'
         + '<div>'
         + '<div style="font-weight:800;font-size:12px">'+esc(tb.n)+'</div>'
-        + '<div style="font-size:10px;color:#94a3b8">'+esc(tb.t)+'·'+esc(String(tb.c))+'인</div>'
         + '</div>'
         + '<div style="width:9px;height:9px;border-radius:50%;background:'+dot+';box-shadow:'+dshadow+';flex-shrink:0;margin-top:2px"></div>'
         + '</div>';
