@@ -10,6 +10,26 @@
 <title>류마 관리</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+/* 아이패드 가로 모드 대응 */
+@media screen and (orientation: landscape) and (min-width: 768px) {
+  #main {
+    overflow: hidden;
+    padding: 6px;
+  }
+  #cv {
+    flex: 1;
+    height: 100%;
+    max-height: 100%;
+    position: relative;
+  }
+  #body {
+    overflow: hidden;
+  }
+  /* 사이드바 폭 약간 축소 */
+  #sb {
+    width: 140px;
+  }
+}
 <style>
 :root {
   --bg:#0f0e0d; --surf:#1c1a18; --surf2:#252320; --surf3:#2e2b27;
