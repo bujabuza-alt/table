@@ -253,10 +253,11 @@ textarea.fi{resize:none;min-height:60px;}
   #hd{padding:5px 12px;}
   .hd-date{display:none;}
   .tab{padding:7px 12px;}
-  #main{padding:6px 10px;}
+  #main{padding:6px 10px;overflow:hidden;}
   #rv{padding:6px 10px;}
-  #leg{margin-bottom:6px;}
-  #stats{margin-top:6px;}
+  #leg{margin-bottom:6px;flex-shrink:0;}
+  #cv{flex:1;min-height:0;}
+  #stats{margin-top:6px;flex-shrink:0;}
   #sb{width:176px;}
 }
 </style>
@@ -837,8 +838,15 @@ function renderCanvas() {
   var W = panel.offsetWidth;
   if (!W) { setTimeout(renderCanvas, 50); return; }
   var isLandscape = window.innerWidth > window.innerHeight;
-  var H = Math.round(W * (isLandscape ? 0.7 : 1.25));
-  if (parseInt(panel.style.height) !== H) panel.style.height = H+'px';
+  var H;
+  if (isLandscape) {
+    panel.style.height = ''; // CSS flex:1 이 높이를 제어하도록 위임
+    H = panel.offsetHeight;
+    if (!H) { setTimeout(renderCanvas, 50); return; }
+  } else {
+    H = Math.round(W * 1.25);
+    if (parseInt(panel.style.height) !== H) panel.style.height = H+'px';
+  }
   var now = Date.now();
   S.tables.forEach(function(tb) {
     var card = document.getElementById('tc'+tb.id);
