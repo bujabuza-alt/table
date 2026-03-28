@@ -30,7 +30,7 @@ body.light {
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 /* 라이트모드 전용 오버라이드 */
 body.light #cv { background:#ffffff; }
-body.light .tc { box-shadow:0 1px 4px rgba(0,0,0,.08); }
+body.light .tc { box-shadow:0 1px 6px rgba(0,0,0,.1); }
 body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;position:fixed;width:100%;height:100%;}
 
 /* 매장선택 화면 */
@@ -135,8 +135,16 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
 #edbanner{display:none;position:absolute;top:0;left:0;right:0;background:rgba(196,18,48,.1);border-bottom:2px dashed var(--red);padding:6px;font-size:11px;color:var(--red);font-weight:700;text-align:center;z-index:5;}
 #cv.em #edbanner{display:block;}
 #cv.em{border:2px dashed var(--red);}
-.tc{position:absolute;border-radius:8px;border:1.5px solid;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;}
+.tc{position:absolute;border-radius:10px;border:1.5px solid;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.12);}
 .tc.drag{opacity:.85;z-index:50;box-shadow:0 8px 28px rgba(0,0,0,.5);}
+.tc-hd{display:flex;justify-content:space-between;align-items:flex-start;width:100%;}
+.tc-name{font-weight:800;font-size:12px;line-height:1.2;}
+.tc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:2px;}
+.tc-info{display:flex;flex-direction:column;gap:1px;}
+.tc-info-row{font-size:10px;font-weight:700;line-height:1.25;}
+.tc-info-sub{font-size:9px;font-weight:500;opacity:.8;line-height:1.2;}
+.tc-badge{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;background:rgba(0,0,0,.1);}
+.tc-bar-r{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
 #stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
 .sc{background:var(--surf);border-radius:10px;padding:9px 10px;border:1px solid var(--border);display:flex;align-items:center;gap:8px;}
 .si{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
@@ -331,17 +339,17 @@ textarea.fi{resize:none;min-height:60px;}
         <div class="ld"><div class="lc" style="background:var(--red)"></div>1.5h+</div>
         <span id="ehint" style="margin-left:auto;font-size:10px;color:var(--red);font-weight:700"></span>
       </div>
-      <div id="cv"><div id="edbanner">✏ 길게 누르고 드래그 · 완료 후 저장 클릭</div><div id="cvi"></div></div>
+      <div id="cv"><div id="edbanner">편집 모드 · 길게 누르고 드래그 · 완료 후 저장 클릭</div><div id="cvi"></div></div>
       <div id="listview"></div>
       <div id="stats">
-        <div class="sc"><div class="si" style="background:rgba(42,114,200,.12)">👥</div><div><div class="sl">착석 인원</div><div class="sv" id="s1" style="color:#60a5fa">0명</div></div></div>
-        <div class="sc"><div class="si" style="background:rgba(200,146,42,.12)">🪑</div><div><div class="sl">착석 테이블</div><div class="sv" id="s2" style="color:var(--amber)">0개</div></div></div>
-        <div class="sc"><div class="si" style="background:rgba(42,154,90,.12)">⬜</div><div><div class="sl">빈 테이블</div><div class="sv" id="s3" style="color:#4ade80">0개</div></div></div>
+        <div class="sc"><div class="si" style="background:rgba(42,114,200,.12)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><div class="sl">착석 인원</div><div class="sv" id="s1" style="color:#60a5fa">0명</div></div></div>
+        <div class="sc"><div class="si" style="background:rgba(200,146,42,.12)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></div><div><div class="sl">착석 테이블</div><div class="sv" id="s2" style="color:var(--amber)">0개</div></div></div>
+        <div class="sc"><div class="si" style="background:rgba(42,154,90,.12)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg></div><div><div class="sl">빈 테이블</div><div class="sv" id="s3" style="color:#4ade80">0개</div></div></div>
       </div>
     </div>
     <div id="rv">
       <div class="rv-top">
-        <input class="rv-srch" id="rvsrch" type="search" placeholder="🔍 이름, 연락처 검색…">
+        <input class="rv-srch" id="rvsrch" type="search" placeholder="이름, 연락처 검색…">
         <button class="bp" id="baddRv">+ 예약</button>
       </div>
       <div id="cal">
@@ -865,7 +873,7 @@ function renderCanvas() {
     card.style.left=x+'px'; card.style.top=y+'px';
     card.style.width=sz.w+'px'; card.style.height=sz.h+'px';
     card.style.background=c.bg; card.style.borderColor=c.bd;
-    card.style.padding=(tb.shape==='bar')?'5px 9px':'8px 9px 6px';
+    card.style.padding=(tb.shape==='bar')?'5px 9px':'8px 9px 7px';
     card.style.cursor=editMode?'grab':'pointer';
     card.style.boxShadow=editMode?'0 0 0 2px rgba(196,18,48,.3)':'';
     var wasDrag = card.classList.contains('drag');
@@ -879,46 +887,59 @@ function renderCanvas() {
     cardCache[tb.id]=key;
     var html='';
     var isBar = tb.shape==='bar';
+    var elapsed = tb.st==='occupied' ? now - tb.seatTime : 0;
+    var isOvertime = elapsed >= 5400000;
+    var elapsedTxt = elapsed ? (isOvertime ? '+' : '') + fmtElapsed(elapsed) : '';
+    var dotColor = editMode ? 'rgba(196,18,48,.5)' : dot;
+
     if (isBar) {
       html = '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;height:100%">'
-           + '<div style="font-weight:800;font-size:11px;color:'+c.tx+'">'+esc(tb.n)+'</div>';
+           + '<div class="tc-name" style="color:'+c.tx+'">'+esc(tb.n)+'</div>';
       if (editMode) {
-        html += '<div style="width:7px;height:7px;border-radius:50%;background:rgba(196,18,48,.5)"></div>';
+        html += '<div class="tc-dot" style="background:'+dotColor+'"></div>';
       } else if (tb.st==='occupied') {
-        html += '<div style="text-align:right"><div style="font-size:11px;color:'+c.tx+';font-weight:700">'+esc(String(tb.g))+'명</div>'
-              + '<div style="font-size:9px;color:'+c.tx+'">'+fmtElapsed(now-tb.seatTime)+'</div></div>';
+        html += '<div class="tc-bar-r">'
+              + '<div class="tc-info-row" style="color:'+c.tx+'">'+esc(String(tb.g))+'명</div>'
+              + '<div class="tc-info-sub" style="color:'+c.tx+'">'+elapsedTxt+'</div>'
+              + '</div>';
       } else if (tb.st==='reserved') {
-        html += '<div style="font-size:11px;color:'+c.tx+';font-weight:700">'+esc(tb.res&&tb.res.time||'')+'</div>';
+        html += '<div class="tc-bar-r">'
+              + '<div class="tc-info-row" style="color:'+c.tx+'">'+esc(tb.res&&tb.res.time||'')+'</div>'
+              + (tb.res&&tb.res.g ? '<div class="tc-info-sub" style="color:'+c.tx+'">'+esc(String(tb.res.g))+'명</div>' : '')
+              + '</div>';
       } else {
-        html += '<div style="width:7px;height:7px;border-radius:50%;background:'+dot+'"></div>';
+        html += '<div class="tc-dot" style="background:'+dotColor+'"></div>';
       }
       html += '</div>';
     } else {
-      html = '<div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%">'
-           + '<div style="font-weight:800;font-size:12px;color:'+c.tx+'">'+esc(tb.n)+'</div>';
-      if (editMode) {
-        html += '<div style="width:7px;height:7px;border-radius:50%;background:rgba(196,18,48,.5);flex-shrink:0;margin-top:2px"></div>';
-      } else {
-        html += '<div style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;margin-top:2px"></div>';
-      }
-      html += '</div>';
+      // Square / Wide
+      html = '<div class="tc-hd">'
+           + '<div class="tc-name" style="color:'+c.tx+'">'+esc(tb.n)+'</div>'
+           + '<div class="tc-dot" style="background:'+dotColor+'"></div>'
+           + '</div>';
+
       if (!editMode) {
-        if (tb.st==='occupied')
-          html += '<div style="font-size:11px;color:'+c.tx+';font-weight:700;margin-top:3px">👤'+esc(String(tb.g))+'명</div>'
-                + '<div style="font-size:10px;color:'+c.tx+';margin-top:1px">⏱'+fmtElapsed(now-tb.seatTime)+'</div>';
-        else if (tb.st==='reserved')
-          html += '<div style="font-size:11px;color:'+c.tx+';font-weight:700;margin-top:3px">📋'+esc(tb.res&&tb.res.name||'')+'</div>'
-                + '<div style="font-size:10px;color:'+c.tx+';margin-top:1px">'+esc(tb.res&&tb.res.time||'')+'·'+esc(String(tb.res&&tb.res.g||''))+'명</div>';
-        else
-          if (tb.mergeIds && tb.mergeIds.length) {
-            html += '<div style="margin-top:3px;font-size:9px;color:#a78bfa;font-weight:700">🔗 '+getMergedNames(tb.id).join('+')+'</div>';
-          }
-          html += '<button style="margin-top:3px;font-size:10px;color:var(--text3);background:var(--surf3);border:none;border-radius:5px;padding:2px 6px;cursor:pointer" data-resid="'+tb.id+'">예약 등록</button>';
+        if (tb.st==='occupied') {
+          html += '<div class="tc-info">'
+                + '<div class="tc-info-row" style="color:'+c.tx+'">'+esc(String(tb.g))+'명</div>'
+                + '<div class="tc-info-sub" style="color:'+c.tx+'">'+(isOvertime?'<span style="font-weight:800">'+elapsedTxt+'</span>':elapsedTxt)+'</div>'
+                + '</div>';
+        } else if (tb.st==='reserved') {
+          var resName = esc(tb.res&&tb.res.name||'');
+          var resTime = esc(tb.res&&tb.res.time||'');
+          var resG = tb.res&&tb.res.g ? esc(String(tb.res.g))+'명' : '';
+          html += '<div class="tc-info">'
+                + (resName ? '<div class="tc-info-row" style="color:'+c.tx+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+resName+'</div>' : '')
+                + '<div class="tc-info-sub" style="color:'+c.tx+'">'+(resTime&&resG ? resTime+' · '+resG : resTime||resG)+'</div>'
+                + '</div>';
+        } else if (tb.mergeIds && tb.mergeIds.length) {
+          html += '<div class="tc-info">'
+                + '<div style="font-size:9px;color:#a78bfa;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getMergedNames(tb.id).join(' + ')+'</div>'
+                + '</div>';
+        }
       }
     }
     card.innerHTML = html;
-    var rb = card.querySelector('[data-resid]');
-    if (rb) rb.addEventListener('click', function(e){ e.stopPropagation(); openResModal(+this.getAttribute('data-resid')); });
   });
 }
 
@@ -1040,14 +1061,14 @@ function renderListView(){
     var barColor=c.bd;
     if(tb.st==='occupied'){
       statusHtml='<div class="lv-status" style="color:'+c.tx+'">착석중</div>';
-      subHtml='👤'+tb.g+'명';
+      subHtml=tb.g+'명';
       timeHtml='<div style="text-align:right"><div style="font-weight:800;font-size:13px;color:'+c.tx+'">'+fmtElapsed(now-tb.seatTime)+'</div><div style="font-size:10px;color:var(--text3)">'+fmtTime(tb.seatTime)+' 착석</div></div>';
     } else if(tb.st==='reserved'){
       statusHtml='<div class="lv-status" style="color:var(--blue)">예약</div>';
       subHtml=esc(tb.res&&tb.res.name||'')+(tb.res&&tb.res.g?' · '+tb.res.g+'명':'');
       timeHtml='<div style="font-weight:800;font-size:14px;color:var(--blue)">'+esc(tb.res&&tb.res.time||'')+'</div>';
     } else {
-      statusHtml='<div class="lv-status" style="color:'+(isMerged?'#a78bfa':'var(--text3)')+'">빈 테이블'+(isMerged?' · 🔗묶음':'')+'</div>';
+      statusHtml='<div class="lv-status" style="color:'+(isMerged?'#a78bfa':'var(--text3)')+'">빈 테이블'+(isMerged?' · 합석':'')+'</div>';
       subHtml=({sq:'정방형',wide:'가로형',bar:'바형'}[tb.shape]||'')+' · '+tb.c+'인';
       barColor=isMerged?'var(--indigo)':c.bd;
     }
