@@ -1780,6 +1780,18 @@ document.getElementById('hd-logo').src  = LOGO_DATA;
   window.addEventListener('load',function(){setTimeout(_fixCv,600);});
 })();
 // =====================================================
+// 가로/세로 전환 시 캔버스 재렌더링
+(function(){
+  var _rszT;
+  window.addEventListener('orientationchange', function(){
+    setTimeout(renderCanvas, 200);
+    setTimeout(renderCanvas, 500);
+  });
+  window.addEventListener('resize', function(){
+    clearTimeout(_rszT);
+    _rszT = setTimeout(renderCanvas, 200);
+  });
+})();
 </script>
 </body>
 </html>
