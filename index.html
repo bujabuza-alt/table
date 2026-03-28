@@ -728,6 +728,8 @@ function tblColor(st, seatTime) {
 }
 function cardSz(shape, sz, W, H) {
   var bw = {s:0.17, m:0.26, l:0.36}[sz] || 0.26;
+  // 가로모드(W>H)에서는 캔버스 높이가 작으므로 카드 크기를 비례 축소
+  if (W > H) bw = bw * 0.75;
   var w  = Math.round(W * bw);
   var ratio = shape==='wide' ? 0.52 : shape==='bar' ? 0.32 : 1.0;
   var h = Math.round(w * ratio);
