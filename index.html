@@ -108,7 +108,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
 
 /* 메인 */
 #main{flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;display:flex;flex-direction:column;}
-#rv{flex:1;min-width:0;overflow:hidden;padding:10px;display:none;flex-direction:column;gap:10px;}
+#rv{flex:1;min-width:0;overflow:hidden;padding:10px 10px 0;display:none;flex-direction:column;gap:10px;}
 #rv.on{display:flex;}
 #leg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
 .ld{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text3);}
@@ -182,7 +182,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
 .dot{width:4px;height:4px;border-radius:50%;background:var(--red);}
 #rvw{background:var(--surf);border-radius:12px;border:1px solid var(--border);overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column;}
 #rv-upcoming{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:60px;}
-#rv-past-wrap{flex-shrink:0;max-height:38%;display:flex;flex-direction:column;border-top:2px solid var(--border2);}
+#rv-past-wrap{flex-shrink:0;max-height:45%;display:flex;flex-direction:column;border-top:2px solid var(--border2);}
 #rv-past{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;}
 .rvw-hd{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .rvw-title{font-weight:800;font-size:14px;color:var(--text);}
@@ -429,7 +429,7 @@ textarea.fi{resize:none;min-height:60px;}
         <div class="rvw-hd"><span class="rvw-title" id="rvtitle">전체 예약</span><div style="display:flex;align-items:center;gap:6px"><button id="rvsort" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surf2);color:var(--text2);cursor:pointer;font-family:inherit;font-weight:700">↑ 날짜순</button><span style="font-size:11px;color:var(--text3)" id="rvcnt"></span></div></div>
         <div id="rv-upcoming"></div>
         <div id="rv-past-wrap" style="display:none">
-          <div class="rv-sec-lbl" id="rv-past-lbl">지난 예약</div>
+          <div class="rv-sec-lbl" id="rv-past-lbl">완료된 예약</div>
           <div id="rv-past"></div>
         </div>
       </div>
@@ -1690,14 +1690,15 @@ function renderRvList(){
   }
   var showSections=!calSel&&!q;
   if(showSections){
-    var upcoming=list.filter(function(r){return r.date>=nd;});
-    var past=list.filter(function(r){return r.date<nd;});
+    var activeSt={confirmed:1,pending:1,arrived:1};
+    var upcoming=list.filter(function(r){return r.date>=nd && activeSt[r.st];});
+    var past=list.filter(function(r){return r.st==='completed'||r.st==='noshow'||r.date<nd;});
     // 예정 예약: rvSortAsc 적용
     upcoming.sort(function(a,b){
       var ka=(a.date||'9999')+(a.time||'99:99'), kb=(b.date||'9999')+(b.time||'99:99');
       return rvSortAsc?(ka<kb?-1:1):(ka>kb?-1:1);
     });
-    // 지난 예약: 최신순 고정
+    // 완료된 예약: 최신순 고정
     past.sort(function(a,b){
       var ka=(a.date||'0000')+(a.time||'00:00'), kb=(b.date||'0000')+(b.time||'00:00');
       return ka>kb?-1:1;
@@ -1708,7 +1709,7 @@ function renderRvList(){
     bindRvi(upcomingEl);
     if(past.length){
       pastWrap.style.display='flex';
-      pastLbl.textContent='지난 예약 '+past.length+'건';
+      pastLbl.textContent='완료된 예약 '+past.length+'건';
       pastEl.innerHTML=past.map(function(r){return rvItemHtml(r,sm,true);}).join('');
       bindRvi(pastEl);
     } else {
