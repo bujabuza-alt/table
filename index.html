@@ -855,6 +855,7 @@ function renderFloorNav() {
       floorDate=this.getAttribute('data-d');
       S.tables.forEach(function(t){cardCache[t.id]='';});
       renderFloorNav();
+      renderSidebar();
       if(viewMode==='list')renderListView();else renderCanvas();
     });
   });
