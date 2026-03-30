@@ -737,11 +737,11 @@ function openCfg() {
 function loadData() {
   try {
     var d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    if (Array.isArray(d.tables)) S.tables = d.tables;
-    if (Array.isArray(d.waits))  S.waits = d.waits;
-    if (Array.isArray(d.ress))   S.ress  = d.ress;
-    if (Array.isArray(d.daily))  S.daily = d.daily;
-    if (Array.isArray(d.customers)) S.customers = d.customers;
+    if (d.tables && d.tables.length) S.tables = d.tables;
+    if (d.waits)  S.waits = d.waits;
+    if (d.ress)   S.ress  = d.ress;
+    if (d.daily)  S.daily = d.daily;
+    if (d.customers) S.customers = d.customers;
     S.tags = (d.tags && d.tags.length) ? d.tags : DEFAULT_TAGS.slice();
   } catch(e) { S.tags = DEFAULT_TAGS.slice(); }
 }
@@ -751,23 +751,7 @@ function saveData() {
   showBadge('saving');
   saveTimer = setTimeout(function() {
     var ts = Date.now(); lastSavedTs = ts;
-
-    // [추가] 날짜별 테이블 저장 공간을 만듭니다.
-    if (!S.dailyTables) S.dailyTables = {};
-    // 현재 보고 있는 날짜(floorDate)의 테이블 상태를 복사해서 저장합니다.
-    S.dailyTables[floorDate || today()] = JSON.parse(JSON.stringify(S.tables));
-
-    var p = {
-      tables: S.tables,
-      dailyTables: S.dailyTables, // 날짜별 데이터 저장소
-      waits: S.waits,
-      ress: S.ress,
-      tags: S.tags,
-      daily: S.daily,
-      customers: S.customers || [],
-      _ts: ts
-    };
-    
+    var p = {tables:S.tables, waits:S.waits, ress:S.ress, tags:S.tags, daily:S.daily, customers:S.customers||[], _ts:ts};
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch(e) {}
     fbRef.set(p)
       .then(function() { showBadge('saved'); setTimeout(function(){ showBadge(''); }, 2000); })
@@ -779,11 +763,6 @@ function startFb() {
   fbRef.off();
   var listenStore = currentStore; // 이 리스너가 등록된 매장 기억
   fbRef.on('value', function(snap) {
-    var d = snap.val();
-if (!d) return;
-
-// 🔥 추가
-if (!S) return;
     if (listenStore !== currentStore) return; // 매장 바뀌었으면 무시
     var d = snap.val();
     if (!d) return;
@@ -803,8 +782,6 @@ if (!S) return;
 }
 function showBadge(s) {
   var el = document.getElementById('badge');
-  if (!el) return; // 추가 (핵심)
-
   el.style.color = ({saving:'#c8922a',saved:'#2a9a5a',err:'var(--red2)'})[s] || 'transparent';
   el.textContent  = ({saving:'저장 중…',saved:'✓ 저장됨',err:'⚠ 실패'})[s] || '';
 }
@@ -840,7 +817,6 @@ function addDays(dateStr, n) {
   return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
 }
 function renderFloorNav() {
-  if (!S || !S.ress) return;
   var td=today(), DOW=['일','월','화','수','목','금','토'];
   // 날짜별 예약 건수 미리 계산
   var counts={};
@@ -877,26 +853,6 @@ function renderFloorNav() {
   el.querySelectorAll('.fdn-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
       floorDate=this.getAttribute('data-d');
-      btn.addEventListener('click', function() {
-      floorDate = this.getAttribute('data-d');
-      
-      // --- 여기부터 추가 ---
-      // 선택한 날짜에 저장된 테이블 데이터가 있으면 불러오고, 없으면 초기화합니다.
-      if (S.dailyTables && S.dailyTables[floorDate]) {
-        S.tables = JSON.parse(JSON.stringify(S.dailyTables[floorDate]));
-      } else {
-        // 저장된 게 없는 미래/과거 날짜라면 기본 빈 테이블 상태로 세팅
-        S.tables = S.tables.map(function(t) { 
-          return Object.assign({}, t, {st:'empty', g:0, seatTime:null}); 
-        });
-      }
-      // --- 여기까지 추가 ---
-
-      S.tables.forEach(function(t){cardCache[t.id]='';});
-      renderFloorNav();
-      renderSidebar();
-      if(viewMode==='list')renderListView();else renderCanvas();
-    });
       S.tables.forEach(function(t){cardCache[t.id]='';});
       renderFloorNav();
       renderSidebar();
@@ -906,31 +862,16 @@ function renderFloorNav() {
 }
 function getVirtualTablesForDate(date) {
   return S.tables.map(function(tb){
-    var res = null;
-    for (var i = 0; i < S.ress.length; i++) {
-      var r = S.ress[i];
-      if (r.tableId === tb.id && r.date === date && r.st !== 'cancelled' && r.st !== 'noshow') {
-        res = r; break;
-      }
+    var res=null;
+    for(var i=0;i<S.ress.length;i++){
+      var r=S.ress[i];
+      if(r.tableId===tb.id&&r.date===date&&r.st!=='cancelled'&&r.st!=='noshow'){res=r;break;}
     }
-
-    var virtual = Object.assign({}, tb, { st: res ? 'reserved' : 'empty', g: 0, seatTime: null, res: null });
-
-    if (res) {
-      var ro = { name: res.nm, g: res.g, time: res.time, date: res.date, phone: res.phone, memo: res.memo, tags: res.tags, resId: res.id };
-      virtual.st = 'reserved';
-      virtual.res = ro;
+    if(res){
+      var ro={name:res.nm,g:res.g,time:res.time,date:res.date,phone:res.phone,memo:res.memo,tags:res.tags,resId:res.id};
+      return Object.assign({},tb,{st:'reserved',res:ro,seatTime:null});
     }
-
-    // ★★★ 합석 정보도 복사 (미래 날짜에서도 하나의 테이블로 인식)
-    if (tb.mergeIds && tb.mergeIds.length) virtual.mergeIds = tb.mergeIds.slice();
-    else if (isSlaveTbl(tb.id)) {
-      // 슬레이브도 mergeIds를 master에서 가져옴
-      var master = S.tables.find(function(t){ return t.mergeIds && t.mergeIds.indexOf(tb.id) >= 0; });
-      if (master) virtual.mergeIds = master.mergeIds ? master.mergeIds.slice() : [];
-    }
-
-    return virtual;
+    return Object.assign({},tb,{st:'empty',g:0,seatTime:null,res:null});
   });
 }
 function mkTable(t) {
@@ -943,14 +884,6 @@ function isSlaveTbl(tid) {
   return S.tables.some(function(t){ return t.mergeIds && t.mergeIds.indexOf(tid) >= 0; });
 }
 function tblColor(st, seatTime, merged) {
-  var isLight = document.body.classList.contains('light');
-
-// 🔥 이 줄 추가
-if (!seatTime && st !== 'reserved') {
-  return isLight
-    ? {bg:'#f5f3f0', bd:'#d8d2c8', tx:'#a09880'}
-    : {bg:'#1c1a18', bd:'#3a3835', tx:'#5a5248'};
-}
   var isLight = document.body.classList.contains('light');
   if (st==='empty' && merged) return isLight
     ? {bg:'rgba(90,82,200,.07)', bd:'rgba(90,82,200,.45)', tx:'#4840b0'}
@@ -1854,30 +1787,14 @@ function openRvDetail(rid){
     +(r.phone?'<button class="ab" style="background:var(--surf3);color:var(--text2);width:100%;margin-bottom:7px" id="bcustinfo">👤 고객 정보</button>':'')
     +'<div class="abs"><button class="ab" style="background:var(--indigo)" id="bedit2">✏️ 수정</button>'
     +'<button class="ab" style="background:var(--red)" id="bcanc">삭제</button></div>');
-  // openRvDetail 안에서 아래 부분을 찾아 교체
-document.getElementById('mdc').querySelectorAll('[data-st]').forEach(function(btn){
-  btn.addEventListener('click', function(){
-    var st = this.getAttribute('data-st');
-    var currentDate = floorDate || today();
-
-    S.ress = S.ress.map(function(x){ return x.id==rid ? Object.assign({},x,{st:st}) : x; });
-
-    // arrived일 때만 현재 날짜 테이블 상태 변경
-    if (st === 'arrived' && r.tableId && r.date === currentDate) {
-      S.tables = S.tables.map(function(t){
-        return t.id === r.tableId ? Object.assign({},t,{st:'occupied', seatTime:Date.now(), g:r.g, res:null}) : t;
-      });
-      S.tables.forEach(function(t){ cardCache[t.id] = ''; });
-    }
-
-    saveData();
-    closeModal();
-    renderReservations();
-    renderHeader();
-    renderStats();
-    renderSidebar();
+  document.getElementById('mdc').querySelectorAll('[data-st]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var st=this.getAttribute('data-st');
+      S.ress=S.ress.map(function(x){return x.id==rid?Object.assign({},x,{st:st}):x;});
+      if(st==='arrived'&&r.tableId){S.tables=S.tables.map(function(t){return t.id===r.tableId?Object.assign({},t,{st:'occupied',seatTime:Date.now(),g:r.g,res:null}):t;});S.tables.forEach(function(t){cardCache[t.id]='';});}
+      saveData(); closeModal(); renderReservations(); renderHeader(); renderStats(); renderSidebar();
+    });
   });
-});
   var ba=document.getElementById('bassign');
   if(ba) ba.addEventListener('click',function(){closeModal();openAssignTable(rid);});
   var bu=document.getElementById('bunassign');
@@ -1955,57 +1872,22 @@ function openCustInfo(phone, name) {
     closeModal();saveData();
   });
 }
-function openAssignTable(rid) {
-  var r = S.ress.filter(function(x){ return x.id == rid; })[0];
-  if (!r) return;
-
-  var currentDate = floorDate || today();   // ← 핵심: 현재 보고 있는 날짜
-
-  var et = S.tables.filter(function(t){ return t.st === 'empty'; });
-  // ★★★ 슬레이브 테이블은 배정 목록에서 제외 (하나의 테이블로 인식)
-  et = et.filter(function(t){ return !isSlaveTbl(t.id); });
-
-  var html = '<div class="md-hd"><span class="md-title">' + esc(r.nm) + ' — 테이블 배정</span><button class="md-x" id="mxbtn">×</button></div>';
-  if (!et.length) html += '<p style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0">빈 테이블 없음</p>';
-  else html += '<p style="font-size:13px;color:var(--text2);margin-bottom:10px">배정할 테이블을 선택하세요</p>' +
-    '<div style="display:flex;flex-direction:column;gap:6px">' +
-    et.map(function(t){
-      return '<button class="tpb" data-tid="' + t.id + '"><span>' + esc(t.n) + '</span><span class="tps">' +
-        ({'sq':'정방형','wide':'가로형','bar':'바형'}[t.shape]||t.shape) + ' ' + t.sz.toUpperCase() + '</span></button>';
-    }).join('') + '</div>';
-
+function openAssignTable(rid){
+  var r=S.ress.filter(function(x){return x.id==rid;})[0]; if(!r)return;
+  var et=S.tables.filter(function(t){return t.st==='empty';});
+  var html='<div class="md-hd"><span class="md-title">'+esc(r.nm)+' — 테이블 배정</span><button class="md-x" id="mxbtn">×</button></div>';
+  if(!et.length) html+='<p style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0">빈 테이블 없음</p>';
+  else html+='<p style="font-size:13px;color:var(--text2);margin-bottom:10px">배정할 테이블을 선택하세요</p>'
+    +'<div style="display:flex;flex-direction:column;gap:6px">'+et.map(function(t){return'<button class="tpb" data-tid="'+t.id+'"><span>'+esc(t.n)+'</span><span class="tps">'+({'sq':'정방형','wide':'가로형','bar':'바형'}[t.shape]||t.shape)+' '+t.sz.toUpperCase()+'</span></button>';}).join('')+'</div>';
   showModal(html);
-
   document.getElementById('mdc').querySelectorAll('.tpb').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var tid = +this.getAttribute('data-tid');
-      var ro = {name:r.nm, g:r.g, time:r.time, date:r.date, phone:r.phone, memo:r.memo, tags:r.tags, resId:r.id};
-
-      // 1. 예약 자체에는 언제나 tableId 저장
-      S.ress = S.ress.map(function(x){ return x.id==rid ? Object.assign({},x,{tableId:tid}) : x; });
-
-      // 2. 현재 보고 있는 날짜의 테이블 상태만 변경 (미래 예약은 오늘 영향 X)
-      if (r.date === currentDate) {
-        S.tables = S.tables.map(function(t){
-          return t.id===tid ? Object.assign({},t,{st:'reserved', res:ro}) : t;
-        });
-        S.tables.forEach(function(t){ cardCache[t.id] = ''; });
-      }
-
-      saveData();
-      closeModal();
-      renderReservations();
-      // 현재 floor가 해당 날짜라면 바로 반영
-      if (currentDate === (floorDate || today())) renderAll();
-    });
-  });
-}
-
-      saveData();
-      closeModal();
-      renderReservations();
-      // 현재 floor가 해당 날짜라면 바로 반영
-      if (currentDate === (floorDate || today())) renderAll();
+    btn.addEventListener('click',function(){
+      var tid=+this.getAttribute('data-tid');
+      var ro={name:r.nm,g:r.g,time:r.time,date:r.date,phone:r.phone,memo:r.memo,tags:r.tags,resId:r.id};
+      S.tables=S.tables.map(function(t){return t.id===tid?Object.assign({},t,{st:'reserved',res:ro}):t;});
+      S.tables.forEach(function(t){cardCache[t.id]='';});
+      S.ress=S.ress.map(function(x){return x.id==rid?Object.assign({},x,{tableId:tid}):x;});
+      saveData(); closeModal(); renderReservations();
     });
   });
 }
