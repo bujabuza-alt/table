@@ -868,6 +868,26 @@ function renderFloorNav() {
   el.querySelectorAll('.fdn-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
       floorDate=this.getAttribute('data-d');
+      btn.addEventListener('click', function() {
+      floorDate = this.getAttribute('data-d');
+      
+      // --- 여기부터 추가 ---
+      // 선택한 날짜에 저장된 테이블 데이터가 있으면 불러오고, 없으면 초기화합니다.
+      if (S.dailyTables && S.dailyTables[floorDate]) {
+        S.tables = JSON.parse(JSON.stringify(S.dailyTables[floorDate]));
+      } else {
+        // 저장된 게 없는 미래/과거 날짜라면 기본 빈 테이블 상태로 세팅
+        S.tables = S.tables.map(function(t) { 
+          return Object.assign({}, t, {st:'empty', g:0, seatTime:null}); 
+        });
+      }
+      // --- 여기까지 추가 ---
+
+      S.tables.forEach(function(t){cardCache[t.id]='';});
+      renderFloorNav();
+      renderSidebar();
+      if(viewMode==='list')renderListView();else renderCanvas();
+    });
       S.tables.forEach(function(t){cardCache[t.id]='';});
       renderFloorNav();
       renderSidebar();
