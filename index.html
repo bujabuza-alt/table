@@ -492,9 +492,11 @@ var INIT_PARAGON = [
   {id:9,n:'바2', shape:'bar', sz:'m',c:2,px:68,py:76}
 ];
 
-var S = {tables:[],waits:[],ress:[],tags:[],daily:[],customers:[]};
-var DEFAULT_TAGS = ['생일','기념일','데이트','VIP','단체','비즈니스'];
-var currentTab='floor', editMode=false, saveTimer=null;
+var S = { tables: [], waits: [], ress: [], merges: [] };
+var currentTab  = 'floor';
+var editMode    = false;
+var mergeMode   = false;  // 테이블 묶기 선택 모드
+var mergeSel    = [];     // 선택 중인 테이블 id 배열
 var calY=new Date().getFullYear(), calM=new Date().getMonth(), calSel=null;
 var floorDate = '';
 var rvSortAsc=true;
@@ -745,13 +747,11 @@ function openCfg() {
 function loadData() {
   try {
     var d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    if (d.tables && d.tables.length) S.tables = d.tables;
-    if (d.waits)  S.waits = d.waits;
-    if (d.ress)   S.ress  = d.ress;
-    if (d.daily)  S.daily = d.daily;
-    if (d.customers) S.customers = d.customers;
-    S.tags = (d.tags && d.tags.length) ? d.tags : DEFAULT_TAGS.slice();
-  } catch(e) { S.tags = DEFAULT_TAGS.slice(); }
+    if (d.tables) S.tables = d.tables;
+    if (d.waits)  S.waits  = d.waits;
+    if (d.ress)   S.ress   = d.ress;
+    if (d.merges) S.merges = d.merges;
+  } catch(e) {}
 }
 function saveData() {
   if (!fbRef) return;
@@ -801,6 +801,25 @@ function esc(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function uid()  { return Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+  // ── 테이블 묶기 유틸 ──────────────────────────────────
+function getMergeGroup(tid) {
+  for (var i = 0; i < S.merges.length; i++) {
+    if (S.merges[i].indexOf(tid) >= 0) return S.merges[i];
+  }
+  return null;
+}
+function mergedCap(ids) {
+  return ids.reduce(function(sum, id) {
+    var t = S.tables.filter(function(x){ return x.id === id; })[0];
+    return sum + (t ? t.c : 0);
+  }, 0);
+}
+// 묶기 그룹 통계용: secondary(비주도) 테이블 ID 목록
+function mergedSecondaryIds() {
+  var ids = [];
+  S.merges.forEach(function(g){ g.slice(1).forEach(function(id){ ids.push(id); }); });
+  return ids;
+}
 function pad(n) { return String(n).padStart(2,'0'); }
 function fmtElapsed(ms) {
   var t=Math.floor(ms/1000), h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60;
@@ -939,12 +958,15 @@ function renderHeader() {
   document.getElementById('c3').textContent = '완료 '+doneCnt();
 }
 function renderStats() {
-  var guests = S.tables.reduce(function(a,t){ return a+(t.st==='occupied'?t.g:0); }, 0);
-  var occ    = S.tables.filter(function(t){ return t.st==='occupied'; }).length;
-  var emp    = S.tables.filter(function(t){ return t.st==='empty'; }).length;
+  var sec = mergedSecondaryIds(); // 묶음 secondary 테이블은 통계에서 제외
+  var act = S.tables.filter(function(t){ return sec.indexOf(t.id) < 0; });
+  var guests = act.reduce(function(a,t){ return a + (t.st==='occupied' ? t.g : 0); }, 0);
+  var occ    = act.filter(function(t){ return t.st==='occupied'; }).length;
+  var emp    = act.filter(function(t){ return t.st==='empty'; }).length;
   document.getElementById('s1').textContent = guests+'명';
   document.getElementById('s2').textContent = occ+'개';
   document.getElementById('s3').textContent = emp+'개';
+  document.getElementById('s4').textContent = S.waits.length+'팀';
 }
 
 // ── 사이드바 ──
