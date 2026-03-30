@@ -2360,6 +2360,12 @@ function openTagMgr(){
 // ── 날짜 동기화 ──
 function syncToday(){
   var td=today(), changed=false;
+  // 오늘 날짜가 아닌 예약 정보가 테이블에 남아있으면 초기화
+  var staleIds=S.tables.filter(function(t){return t.st==='reserved'&&t.res&&t.res.date&&t.res.date!==td;}).map(function(t){return t.id;});
+  if(staleIds.length){
+    S.tables=S.tables.map(function(t){return staleIds.indexOf(t.id)>=0?Object.assign({},t,{st:'empty',g:0,seatTime:null,res:null}):t;});
+    changed=true;
+  }
   S.ress.forEach(function(r){
     if(r.date===td&&r.st==='confirmed'&&r.tableId){
       var tbl=S.tables.filter(function(t){return t.id===r.tableId;})[0];
