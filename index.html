@@ -1630,7 +1630,7 @@ function openResModal(tid){
     if(!nm||!rt){alert('이름과 시간을 입력하세요');return;}
     var g=getGuestVal('g-res'), phone=getPh('rp'), memo=document.getElementById('rm').value, tags=getTags('rtags');
     var ro={name:nm,g:g,time:rt,date:rd,phone:phone,memo:memo,tags:tags};
-    S.tables=S.tables.map(function(t){return t.id===activeResTableId?Object.assign({},t,{st:'reserved',res:ro}):t;});
+    if(rd===today()){S.tables=S.tables.map(function(t){return t.id===activeResTableId?Object.assign({},t,{st:'reserved',res:ro}):t;});}
     S.ress.push({id:uid(),nm:nm,phone:phone,date:rd,time:rt,g:g,memo:memo,tags:tags,st:'confirmed',tableId:activeResTableId});
     closeModal(); saveData(); renderAll();
   });
@@ -1756,7 +1756,7 @@ function openAddRv(){
     var tid=avTid?+avTid:null;
     var nr={id:uid(),nm:nm,phone:getPh('avp'),date:d,time:t,g:getGuestVal('g-addrv'),memo:document.getElementById('avm').value,tags:getTags('avtags'),st:document.getElementById('avs').value,tableId:tid||null};
     S.ress.push(nr);
-    if(tid){
+    if(tid&&d===today()){
       var ro={name:nm,g:getGuestVal('g-addrv'),time:t,date:d,phone:nr.phone,memo:nr.memo,tags:nr.tags,resId:nr.id};
       S.tables=S.tables.map(function(tb){return tb.id===tid?Object.assign({},tb,{st:'reserved',res:ro}):tb;});
       S.tables.forEach(function(tb){cardCache[tb.id]='';});
@@ -1799,7 +1799,7 @@ function openRvDetail(rid){
   if(ba) ba.addEventListener('click',function(){closeModal();openAssignTable(rid);});
   var bu=document.getElementById('bunassign');
   if(bu) bu.addEventListener('click',function(){
-    if(tbl){S.tables=S.tables.map(function(t){return t.id===tbl.id?Object.assign({},t,{st:'empty',res:null}):t;});S.tables.forEach(function(t){cardCache[t.id]='';});}
+    if(tbl&&r.date===today()){S.tables=S.tables.map(function(t){return t.id===tbl.id?Object.assign({},t,{st:'empty',res:null}):t;});S.tables.forEach(function(t){cardCache[t.id]='';});}
     S.ress=S.ress.map(function(x){return x.id==rid?Object.assign({},x,{tableId:null}):x;});
     saveData(); closeModal(); renderReservations();
   });
@@ -1808,7 +1808,7 @@ function openRvDetail(rid){
   document.getElementById('bedit2').addEventListener('click',function(){closeModal();openEditRv(rid);});
   document.getElementById('bcanc').addEventListener('click',function(){
     if(!confirm('예약을 삭제할까요?'))return;
-    if(r.tableId){S.tables=S.tables.map(function(t){return t.id===r.tableId&&t.st==='reserved'?Object.assign({},t,{st:'empty',res:null}):t;});S.tables.forEach(function(t){cardCache[t.id]='';});}
+    if(r.tableId&&r.date===today()){S.tables=S.tables.map(function(t){return t.id===r.tableId&&t.st==='reserved'?Object.assign({},t,{st:'empty',res:null}):t;});S.tables.forEach(function(t){cardCache[t.id]='';});}
     S.ress=S.ress.filter(function(x){return x.id!=rid;}); saveData(); closeModal(); renderReservations();
   });
 }
@@ -1884,8 +1884,7 @@ function openAssignTable(rid){
     btn.addEventListener('click',function(){
       var tid=+this.getAttribute('data-tid');
       var ro={name:r.nm,g:r.g,time:r.time,date:r.date,phone:r.phone,memo:r.memo,tags:r.tags,resId:r.id};
-      S.tables=S.tables.map(function(t){return t.id===tid?Object.assign({},t,{st:'reserved',res:ro}):t;});
-      S.tables.forEach(function(t){cardCache[t.id]='';});
+      if(r.date===today()){S.tables=S.tables.map(function(t){return t.id===tid?Object.assign({},t,{st:'reserved',res:ro}):t;});S.tables.forEach(function(t){cardCache[t.id]='';});}
       S.ress=S.ress.map(function(x){return x.id==rid?Object.assign({},x,{tableId:tid}):x;});
       saveData(); closeModal(); renderReservations();
     });
