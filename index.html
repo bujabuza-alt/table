@@ -751,7 +751,22 @@ function saveData() {
   showBadge('saving');
   saveTimer = setTimeout(function() {
     var ts = Date.now(); lastSavedTs = ts;
-    var p = {tables:S.tables, waits:S.waits, ress:S.ress, tags:S.tags, daily:S.daily, customers:S.customers||[], _ts:ts};
+    
+    // [추가] 오늘 날짜의 테이블 상태를 별도로 관리합니다.
+    if (!S.dailyTables) S.dailyTables = {};
+    S.dailyTables[today()] = S.tables; 
+
+    var p = {
+      tables: S.tables, 
+      dailyTables: S.dailyTables, // 날짜별 테이블 상태 저장소 추가
+      waits: S.waits, 
+      ress: S.ress, 
+      tags: S.tags, 
+      daily: S.daily, 
+      customers: S.customers || [], 
+      _ts: ts
+    };
+    
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch(e) {}
     fbRef.set(p)
       .then(function() { showBadge('saved'); setTimeout(function(){ showBadge(''); }, 2000); })
