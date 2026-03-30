@@ -1128,8 +1128,12 @@ function renderCanvas() {
       inner.appendChild(card); bindCard(card, tb.id); cardCache[tb.id]='';
     }
     var isMerged = !!(tb.mergeIds && tb.mergeIds.length) || isSlaveTbl(tb.id);
-    var c  = tblColor(tb.st, tb.seatTime, isMerged);
-    var sz = cardSz(tb.shape||'sq', tb.sz||'m', W, H);
+    var c   = tableColor(tb.st, tb.seatTime);
+    // 묶인 빈 테이블은 틸(teal) 색상으로 구별
+    if (getMergeGroup(tb.id) && tb.st === 'empty') {
+      c = {bg:'#f0fdfa', bd:'#0d9488', tx:'#134e4a'};
+    }
+    var sz  = cardSize(tb.t, W, H);
     var x  = Math.max(0, Math.min(W-sz.w, Math.round(tb.px/100*W)));
     var y  = Math.max(0, Math.min(H-sz.h, Math.round(tb.py/100*H)));
     card.style.left=x+'px'; card.style.top=y+'px';
@@ -1143,8 +1147,9 @@ function renderCanvas() {
     var isLightMode = document.body.classList.contains('light');
     var dot = tb.st==='occupied'?'#2a9a5a':tb.st==='reserved'?'var(--blue)':(isMerged?'var(--indigo)':(isLightMode?'#c8c0b0':'#3a3835'));
     var elMin = tb.st==='occupied'?Math.floor((now-tb.seatTime)/60000):0;
-    var key = tb.st+'|'+tb.g+'|'+(tb.seatTime||0)+'|'+elMin+'|'+(tb.res?JSON.stringify(tb.res):'')+
-              '|'+editMode+'|'+tb.shape+'|'+tb.sz+'|'+(isMerged?1:0);
+    var cacheKey   = tb.st + '|' + tb.g + '|' + (tb.seatTime||0) + '|' + elapsedMin
+                   + '|' + (tb.res ? JSON.stringify(tb.res) : '') + '|' + editMode
+                   + '|' + isMerged + '|' + isMergePick;
     if (cardCache[tb.id]===key) return;
     cardCache[tb.id]=key;
     var html='';
@@ -1211,7 +1216,8 @@ function bindCard(card, tid) {
   card.addEventListener('touchstart', function(e){
     tapAt=Date.now(); if(!editMode)return;
     var touch=e.touches[0];
-    lpt=setTimeout(function(){ dragging=true; card.classList.add('drag'); startDrag(card,tid,touch.clientX,touch.clientY); },180);
+    lpt=setTimeout(function(){ dragging=true; card.classList.add('drag'); 
+                              startDrag(card,tid,touch.clientX,touch.clientY); },180);
   }, {passive:true});
   card.addEventListener('touchmove', function(e){
     if(!editMode)return; if(lpt){clearTimeout(lpt);lpt=null;} if(!dragging)return; e.preventDefault();
@@ -1220,7 +1226,10 @@ function bindCard(card, tid) {
   card.addEventListener('touchend', function(){
     if(lpt){clearTimeout(lpt);lpt=null;}
     if(dragging){dragging=false;card.classList.remove('drag');snapCard(tid);saveData();return;}
-    if(!editMode && Date.now()-tapAt<280) openTableModal(tid);
+  if (!editMode && Date.now() - tapAt < 280) {
+      if (mergeMode) { handleMergeTap(tid); return; }
+      openTableModal(tid);
+    }
   });
   card.addEventListener('mousedown', function(e){
     if(!editMode)return; dragging=true; card.classList.add('drag'); startDrag(card,tid,e.clientX,e.clientY);
@@ -1228,8 +1237,12 @@ function bindCard(card, tid) {
     function onUp(){dragging=false;card.classList.remove('drag');snapCard(tid);saveData();document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);}
     document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
   });
-  card.addEventListener('click', function(){ openTableModal(tid); });
-}
+  card.addEventListener('click', function() {
+    if (!editMode) {
+      if (mergeMode) { handleMergeTap(tid); return; }
+      openTableModal(tid);
+    }
+  });
 function startDrag(card,tid,cx,cy){
   var r=card.getBoundingClientRect(); dragOffset={x:cx-r.left,y:cy-r.top};
   dragPanelRect=document.getElementById('cv').getBoundingClientRect();
