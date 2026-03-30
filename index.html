@@ -749,8 +749,8 @@ function saveData() {
   if (!fbRef) return;
   clearTimeout(saveTimer);
   showBadge('saving');
+  var ts = Date.now(); lastSavedTs = ts;  // 즉시 설정해 Firebase 리스너 재진입 방지
   saveTimer = setTimeout(function() {
-    var ts = Date.now(); lastSavedTs = ts;
     var p = {tables:S.tables, waits:S.waits, ress:S.ress, tags:S.tags, daily:S.daily, customers:S.customers||[], _ts:ts};
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch(e) {}
     fbRef.set(p)
@@ -2376,7 +2376,15 @@ function syncToday(){
       }
     }
   });
-  if(changed){S.tables.forEach(function(t){cardCache[t.id]='';});saveData();}
+  if(changed){
+    S.tables.forEach(function(t){cardCache[t.id]='';});
+    // 디바운스 없이 즉시 저장 - 리스너 재진입 루프 방지
+    clearTimeout(saveTimer);
+    var ts=Date.now(); lastSavedTs=ts;
+    var p={tables:S.tables,waits:S.waits,ress:S.ress,tags:S.tags,daily:S.daily,customers:S.customers||[],_ts:ts};
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(p));}catch(e){}
+    if(fbRef) fbRef.set(p).then(function(){showBadge('saved');setTimeout(function(){showBadge('');},2000);}).catch(function(){showBadge('err');});
+  }
 }
 function renderAll(){
   renderHeader(); renderSidebar(); renderStats(); renderFloorNav();
