@@ -1237,9 +1237,10 @@ function openSeatWaiter(wid){
 
 // ── 테이블 모달 ──
 function openTableModal(tid){
-  var tb=S.tables.filter(function(t){return t.id===tid;})[0]; if(!tb)return;
+  var tb = S.tables.filter(function(t){ return t.id === tid; })[0];
+  if(!tb) return;
+
   if(editMode){
-    // 편집모드: 편집/삭제 모달
     showModal('<div class="md-hd"><span class="md-title">'+esc(tb.n)+' 테이블</span><button class="md-x" id="mxbtn">×</button></div>'
       +'<div class="mb">'
       +'<button class="ab" style="background:var(--indigo);width:100%" id="tbl-edit-btn">✏️ 이름 · 형태 변경</button>'
@@ -1249,12 +1250,36 @@ function openTableModal(tid){
     document.getElementById('tbl-del-btn').addEventListener('click',function(){ closeModal(); deleteTable(tid); });
     return;
   }
-  gvFloor=tb.g||2;
+
+  gvFloor = tb.g || 2;
+
   if(tb.st==='occupied') showOccupied(tb);
   else if(tb.st==='reserved') showReserved(tb);
   else showEmpty(tb);
-}
-function tableAssignedListHtml(tid){
+
+  // ====================== 묶음 풀기 버튼 추가 ======================
+  if (tb.mergeIds && tb.mergeIds.length > 0) {
+    setTimeout(() => {
+      const modalContent = document.querySelector('#mdc .mb'); // 또는 '#mdc'
+      if (modalContent) {
+        const btn = document.createElement('button');
+        btn.className = 'ab';
+        btn.style.background = 'var(--red)';
+        btn.style.width = '100%';
+        btn.style.marginTop = '8px';
+        btn.innerHTML = '🔓 테이블 묶음 풀기';
+        btn.id = 'btn-unmerge';
+        modalContent.appendChild(btn);
+
+        btn.addEventListener('click', function() {
+          if (confirm('정말로 이 테이블의 묶음을 해제하시겠습니까?')) {
+            unmergeTables(tid);
+          }
+        });
+      }
+    }, 50);
+  }
+}function tableAssignedListHtml(tid){
   var d = floorDate || today();
   var list = getAssignedReservationsForTable(tid, d).filter(function(r){ return r.st!=='completed'; });
   if (!list.length) return '';
@@ -2262,4 +2287,30 @@ document.getElementById('hd-logo').src  = LOGO_DATA;
     clearTimeout(_rszT);
     _rszT = setTimeout(renderCanvas, 200);
   });
+// ── 테이블 묶음 풀기 (Unmerge) ──
+function unmergeTables(masterId) {
+  const master = S.tables.find(t => t.id === masterId);
+  if (!master || !master.mergeIds || !master.mergeIds.length) {
+    alert('이 테이블은 다른 테이블과 묶여있지 않습니다.');
+    return;
+  }
+
+  const childIds = master.mergeIds;
+  delete master.mergeIds;   // 묶음 정보 삭제
+
+  // 묶여있던 자식 테이블들 초기화
+  S.tables.forEach(t => {
+    if (childIds.includes(t.id)) {
+      t.st = 'empty';
+      t.res = null;
+      delete t.isMergedChild;
+    }
+  });
+
+  cardCache[masterId] = '';
+  saveData();
+  renderCanvas();
+  closeModal();
+  showToast('✅ 테이블 묶음이 해제되었습니다.');
+}
 })();
