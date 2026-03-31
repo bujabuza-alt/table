@@ -469,7 +469,6 @@ if (!seatTime && st !== 'reserved') {
     ? {bg:'#f5f3f0', bd:'#d8d2c8', tx:'#a09880'}
     : {bg:'#1c1a18', bd:'#3a3835', tx:'#5a5248'};
 }
-  var isLight = document.body.classList.contains('light');
   if (st==='empty' && merged) return isLight
     ? {bg:'rgba(90,82,200,.07)', bd:'rgba(90,82,200,.45)', tx:'#4840b0'}
     : {bg:'rgba(90,82,200,.14)', bd:'var(--indigo)',       tx:'#a78bfa'};
@@ -677,8 +676,6 @@ function renderCanvas() {
   var now = Date.now();
   var activeDate = floorDate || today();
   var displayTables = (floorDate === today()) ? S.tables : getVirtualTablesForDate(floorDate);
-  displayTables = displayTables.filter(function(tb){ return !isSlaveTbl(tb.id); });
-  var visible = {};
   displayTables.forEach(function(tb){ visible[tb.id] = true; });
   inner.querySelectorAll('.tc').forEach(function(node){
     var id = +(node.id || '').replace('tc','');
