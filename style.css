@@ -334,34 +334,3 @@ textarea.fi{resize:none;min-height:60px;}
 .tc {
   transform-origin: center center;
 }
-/* ==================== 테이블 묶기 선택 시각화 개선 ==================== */
-
-/* 묶기 후보 테이블 (아직 선택 안 함) */
-.tc.merge-candidate {
-  outline: 3px dashed #a78bfa !important;
-  outline-offset: -3px;
-  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.3) !important;
-  filter: brightness(1.08);
-}
-
-/* 묶기 선택된 테이블 (마스터 또는 선택 완료) */
-.tc.merge-selected {
-  outline: 3px solid #7c3aed !important;
-  outline-offset: -3px;
-  box-shadow: 0 0 0 5px rgba(124, 58, 237, 0.5) !important;
-  filter: brightness(1.12);
-  transform: scale(1.04);
-}
-
-/* 마스터 테이블 (묶음의 중심) */
-.tc.merge-master {
-  box-shadow: 0 0 0 4px #4f46e5, 0 0 15px rgba(79, 70, 229, 0.4) !important;
-  border-color: #6366f1 !important;
-}
-
-/* 호버 시 더 강하게 강조 */
-.tc.merge-candidate:hover,
-.tc.merge-selected:hover {
-  filter: brightness(1.15);
-  transform: scale(1.06);
-}
