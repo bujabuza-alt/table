@@ -1257,29 +1257,31 @@ function openTableModal(tid){
   else if(tb.st==='reserved') showReserved(tb);
   else showEmpty(tb);
 
-  // ====================== 묶음 풀기 버튼 추가 ======================
+// ====================== 여기부터 추가 ======================
+  // 묶여있는 테이블인 경우 "묶음 풀기" 버튼을 모달에 추가
   if (tb.mergeIds && tb.mergeIds.length > 0) {
     setTimeout(() => {
-      const modalContent = document.querySelector('#mdc .mb'); // 또는 '#mdc'
-      if (modalContent) {
-        const btn = document.createElement('button');
-        btn.className = 'ab';
-        btn.style.background = 'var(--red)';
-        btn.style.width = '100%';
-        btn.style.marginTop = '8px';
-        btn.innerHTML = '🔓 테이블 묶음 풀기';
-        btn.id = 'btn-unmerge';
-        modalContent.appendChild(btn);
+      const unmergeBtn = document.createElement('button');
+      unmergeBtn.className = 'ab';
+      unmergeBtn.style.cssText = 'background:var(--red); width:100%; margin-top:8px;';
+      unmergeBtn.innerHTML = '🔓 테이블 묶음 풀기';
+      unmergeBtn.id = 'btn-unmerge';
 
-        btn.addEventListener('click', function() {
-          if (confirm('정말로 이 테이블의 묶음을 해제하시겠습니까?')) {
-            unmergeTables(tid);
-          }
-        });
+      // 모달의 .mb 영역을 찾아 버튼 추가
+      const mbArea = document.querySelector('#mdc .mb');
+      if (mbArea) {
+        mbArea.appendChild(unmergeBtn);
       }
-    }, 50);
+
+      // 버튼 클릭 시 → 확인창 없이 바로 풀기
+      unmergeBtn.addEventListener('click', function() {
+        unmergeTables(tid);
+      });
+    }, 30);   // 모달이 완전히 렌더링된 후에 버튼 추가
   }
-}function tableAssignedListHtml(tid){
+  // ====================== 여기까지 추가 ======================
+
+  }function tableAssignedListHtml(tid){
   var d = floorDate || today();
   var list = getAssignedReservationsForTable(tid, d).filter(function(r){ return r.st!=='completed'; });
   if (!list.length) return '';
@@ -2150,18 +2152,62 @@ function openTagMgr(){
 
 // ── 날짜 동기화 ──
 function syncToday(){
-  var td=today(), changed=false;
+  var td = today();        // 오늘 날짜
+  var currentFloorDate = floorDate || td;   // 현재 보고 있는 날짜 (floor-nav 사용 시)
+  var changed = false;
+
+  // ==================== 날짜가 바뀌었을 때 모든 테이블 묶음 자동 해제 ====================
+  if (currentFloorDate !== lastDate) {
+    console.log('날짜 변경 감지: ' + lastDate + ' → ' + currentFloorDate);
+
+    S.tables.forEach(function(t) {
+      if (t.mergeIds && t.mergeIds.length > 0) {
+        delete t.mergeIds;
+        changed = true;
+      }
+      if (t.isMergedChild) {
+        delete t.isMergedChild;
+        changed = true;
+      }
+    });
+
+    // 빈 테이블들은 empty로 초기화
+    S.tables.forEach(function(t) {
+      if (t.st !== 'reserved' && t.st !== 'occupied') {
+        t.st = 'empty';
+        t.res = null;
+      }
+    });
+
+    if (changed) {
+      console.log('✅ 날짜 변경으로 모든 테이블 묶음이 자동 해제되었습니다.');
+    }
+
+    lastDate = currentFloorDate;   // 현재 보고 있는 날짜로 업데이트
+  }
+
+  // ==================== 기존 로직 (예약 → 착석 자동 적용) ====================
   S.ress.forEach(function(r){
-    if(r.date===td&&r.st==='confirmed'&&r.tableId){
-      var tbl=S.tables.filter(function(t){return t.id===r.tableId;})[0];
-      if(tbl&&tbl.st==='empty'){
-        var ro={name:r.nm,g:r.g,time:r.time,date:r.date,phone:r.phone,memo:r.memo,tags:r.tags,resId:r.id};
-        S.tables=S.tables.map(function(t){return t.id===r.tableId?Object.assign({},t,{st:'reserved',res:ro}):t;});
-        changed=true;
+    if(r.date === currentFloorDate && r.st === 'confirmed' && r.tableId){
+      var tbl = S.tables.filter(function(t){ return t.id === r.tableId; })[0];
+      if(tbl && tbl.st === 'empty'){
+        var ro = {
+          name: r.nm, g: r.g, time: r.time, date: r.date,
+          phone: r.phone, memo: r.memo, tags: r.tags, resId: r.id
+        };
+        S.tables = S.tables.map(function(t){
+          return t.id === r.tableId ? Object.assign({}, t, {st: 'reserved', res: ro}) : t;
+        });
+        changed = true;
       }
     }
   });
-  if(changed){S.tables.forEach(function(t){cardCache[t.id]='';});saveData();}
+
+  if(changed){
+    S.tables.forEach(function(t){ cardCache[t.id] = ''; });
+    saveData();
+    renderAll();
+  }
 }
 function renderAll(){
   renderHeader(); renderSidebar(); renderStats(); renderFloorNav();
@@ -2195,23 +2241,39 @@ document.getElementById('rvsort').addEventListener('click', function(){ rvSortAs
 document.getElementById('mo').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 document.getElementById('mo').addEventListener('touchend', function(e){ if(e.target===this) closeModal(); });
 
+// 마지막 날짜 초기화 (페이지 로드 시 오늘 날짜로 확실히 설정)
 var lastDate = today();
-setInterval(function(){
-  if(!currentStore)return;
-  var nd=today();
-  if(nd!==lastDate){lastDate=nd;syncToday();renderAll();return;}
-  if(currentTab==='floor'){renderCanvas();renderSidebar();renderStats();renderHeader();}
-},1000);
 
-window.addEventListener('resize', function(){
-  if(!currentStore)return; S.tables.forEach(function(t){cardCache[t.id]='';});renderCanvas();
-});
-document.addEventListener('visibilitychange', function(){
-  if(document.hidden&&currentStore){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(S));}catch(e){}}
-});
-if('serviceWorker' in navigator){
-  window.addEventListener('load',function(){ navigator.serviceWorker.register('./sw.js').catch(function(){}); });
-}
+// floor-nav 날짜 변경 시에도 syncToday 호출되도록 보강
+var originalRenderFloorNav = renderFloorNav;
+renderFloorNav = function(){
+  originalRenderFloorNav();
+  setTimeout(syncToday, 100);   // 날짜 변경 후 syncToday 호출
+};
+
+// ── 1초마다 체크 ──
+setInterval(function(){
+  if(!currentStore) return;
+
+  var nd = today();
+
+  // 날짜가 바뀌었는지 체크
+  if(nd !== lastDate){
+    console.log('날짜 변경 감지: ' + lastDate + ' → ' + nd);
+    lastDate = nd;
+    syncToday();        // ← 묶음 해제 포함
+    renderAll();
+    return;
+  }
+
+  // 같은 날이면 floor 탭에서만 실시간 업데이트
+  if(currentTab === 'floor'){
+    renderCanvas();
+    renderSidebar();
+    renderStats();
+    renderHeader();
+  }
+}, 1000);
 
 // ── 자동 로그인 (이전에 인증한 기기) ──
 try {
@@ -2287,30 +2349,70 @@ document.getElementById('hd-logo').src  = LOGO_DATA;
     clearTimeout(_rszT);
     _rszT = setTimeout(renderCanvas, 200);
   });
+})();
 // ── 테이블 묶음 풀기 (Unmerge) ──
 function unmergeTables(masterId) {
   const master = S.tables.find(t => t.id === masterId);
-  if (!master || !master.mergeIds || !master.mergeIds.length) {
+  if (!master) {
+    alert('테이블을 찾을 수 없습니다.');
+    return;
+  }
+
+  if (!master.mergeIds || master.mergeIds.length === 0) {
     alert('이 테이블은 다른 테이블과 묶여있지 않습니다.');
     return;
   }
 
-  const childIds = master.mergeIds;
-  delete master.mergeIds;   // 묶음 정보 삭제
+  const childIds = [...master.mergeIds];  // 복사
+  delete master.mergeIds;                 // 마스터의 묶음 정보 제거
 
-  // 묶여있던 자식 테이블들 초기화
+  // 자식 테이블들 모두 빈 테이블로 초기화
   S.tables.forEach(t => {
     if (childIds.includes(t.id)) {
       t.st = 'empty';
       t.res = null;
       delete t.isMergedChild;
+      cardCache[t.id] = '';   // 캐시 초기화
     }
   });
 
-  cardCache[masterId] = '';
-  saveData();
-  renderCanvas();
+  cardCache[masterId] = '';   // 마스터 캐시도 초기화
+
+  saveData();                 // Firebase에 저장
+  renderCanvas();             // 화면 새로 그리기
+  renderSidebar();            // 사이드바도 갱신
+  renderStats();
+
   closeModal();
-  showToast('✅ 테이블 묶음이 해제되었습니다.');
+  showToast('✅ 테이블 묶음이 완전히 해제되었습니다.');
 }
-})();
+// ── 날짜が変わ면 모든 테이블 묶음 자동 해제 ──
+function unmergeAllTables() {
+  let changed = false;
+
+  S.tables.forEach(t => {
+    if (t.mergeIds && t.mergeIds.length > 0) {
+      delete t.mergeIds;
+      changed = true;
+    }
+    if (t.isMergedChild) {
+      delete t.isMergedChild;
+      changed = true;
+    }
+  });
+
+  // 묶음 해제된 테이블들은 모두 empty 상태로 초기화
+  S.tables.forEach(t => {
+    if (t.st === 'reserved' || t.st === 'occupied') return; // 예약/착석 중인 건 건드리지 않음
+    if (t.mergeIds === undefined) {  // 이전에 묶음이었던 흔적 정리
+      t.st = 'empty';
+      t.res = null;
+    }
+  });
+
+  if (changed) {
+    Object.keys(cardCache).forEach(key => cardCache[key] = '');
+    saveData();
+    console.log('✅ 날짜 변경으로 모든 테이블 묶음이 자동 해제되었습니다.');
+  }
+}
