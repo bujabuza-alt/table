@@ -330,3 +330,7 @@ textarea.fi{resize:none;min-height:60px;}
   .ab{min-height:42px;padding:12px 0;}
   .tpb{min-height:42px;padding:12px 13px;}
 }
+/* 테이블 회전 지원 */
+.tc {
+  transform-origin: center center;
+}
