@@ -1,0 +1,21 @@
+/* style.css */
+:root {
+  --bg:#0f0e0d; --surf:#1c1a18; --text:#f0ebe3; --amber:#c8922a; --indigo:#5a52c8;
+}
+
+/* 3번 문제: 묶인 테이블 전용 스타일 */
+.tc.merged-master { 
+    border: 2px solid var(--indigo) !important; 
+    background: rgba(90, 82, 200, 0.15) !important; 
+}
+.tc.merged-slave { 
+    border: 1px dashed var(--indigo) !important; 
+    opacity: 0.6; 
+}
+/* 4번 문제: 테이블 묶기 선택 모드 스타일 */
+.tc.selecting { 
+    border: 2px dotted var(--amber) !important; 
+    box-shadow: 0 0 12px var(--amber); 
+}
+
+/* ... 기존 나머지 CSS 코드 ... */
