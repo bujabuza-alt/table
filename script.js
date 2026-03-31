@@ -676,13 +676,25 @@ function renderCanvas() {
   var now = Date.now();
   var activeDate = floorDate || today();
   var displayTables = (floorDate === today()) ? S.tables : getVirtualTablesForDate(floorDate);
-  displayTables.forEach(function(tb){ visible[tb.id] = true; });
-  inner.querySelectorAll('.tc').forEach(function(node){
-    var id = +(node.id || '').replace('tc','');
-    if (!visible[id]) node.remove();
-  });
-  displayTables = displayTables.filter(function(tb){ return !isSlaveTbl(tb.id); });
-  var visible = {};
+
+// ✅ 1. 먼저 선언
+var visible = {};
+
+// ✅ 2. 필터 먼저
+displayTables = displayTables.filter(function(tb){ 
+  return !isSlaveTbl(tb.id); 
+});
+
+// ✅ 3. 그 다음 값 넣기
+displayTables.forEach(function(tb){ 
+  visible[tb.id] = true; 
+});
+
+// ✅ 4. 마지막에 제거 처리
+inner.querySelectorAll('.tc').forEach(function(node){
+  var id = +(node.id || '').replace('tc','');
+  if (!visible[id]) node.remove();
+});
   displayTables.forEach(function(tb){ visible[tb.id] = true; });
   inner.querySelectorAll('.tc').forEach(function(node){
     var id = +(node.id || '').replace('tc','');
