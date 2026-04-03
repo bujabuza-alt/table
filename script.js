@@ -460,6 +460,23 @@ function mkTable(t) {
 function isSlaveTbl(tid) {
   return S.tables.some(function(t){ return t.mergeIds && t.mergeIds.indexOf(tid) >= 0; });
 }
+function getMasterOfSlave(tid) {
+  return S.tables.filter(function(t){ return t.mergeIds && t.mergeIds.indexOf(tid) >= 0; })[0] || null;
+}
+function getNextGroupName() {
+  var num = 1;
+  S.tables.forEach(function(t){
+    if (t.mergeName) {
+      var m = t.mergeName.match(/^단체(\d+)$/);
+      if (m && parseInt(m[1]) >= num) num = parseInt(m[1]) + 1;
+    }
+  });
+  return '단체' + num;
+}
+var VIVID_COLORS = ['#e63946','#f4a261','#2ec4b6','#457b9d','#e9c46a','#6a4c93','#f72585','#4cc9f0','#06d6a0','#fb8500'];
+function randomVividColor() {
+  return VIVID_COLORS[Math.floor(Math.random() * VIVID_COLORS.length)];
+}
 function tblColor(st, seatTime, merged) {
   var isLight = document.body.classList.contains('light');
 
@@ -680,14 +697,12 @@ function renderCanvas() {
 // ✅ 1. 먼저 선언
 var visible = {};
 
-// ✅ 2. 필터 먼저
-displayTables = displayTables.filter(function(tb){ 
-  return !isSlaveTbl(tb.id); 
-});
+// ✅ 2. (슬레이브 테이블도 원래 위치에 표시 - 필터 제거)
+// 슬레이브 포함 모든 테이블 표시
 
 // ✅ 3. 그 다음 값 넣기
-displayTables.forEach(function(tb){ 
-  visible[tb.id] = true; 
+displayTables.forEach(function(tb){
+  visible[tb.id] = true;
 });
 
 // ✅ 4. 마지막에 제거 처리
@@ -706,8 +721,21 @@ inner.querySelectorAll('.tc').forEach(function(node){
       card = document.createElement('div'); card.id = 'tc'+tb.id;
       inner.appendChild(card); bindCard(card, tb.id); cardCache[tb.id]='';
     }
-    var isMerged = !!(tb.mergeIds && tb.mergeIds.length) || isSlaveTbl(tb.id);
-    var c  = tblColor(tb.st, tb.seatTime, isMerged);
+    var isSlave = isSlaveTbl(tb.id);
+    var masterForSlave = isSlave ? getMasterOfSlave(tb.id) : null;
+    var isMaster = !!(tb.mergeIds && tb.mergeIds.length);
+    var isMerged = isMaster || isSlave;
+    var groupColor = isSlave ? (masterForSlave && masterForSlave.mergeColor) : tb.mergeColor;
+    var groupName  = isSlave ? (masterForSlave && (masterForSlave.mergeName || masterForSlave.n)) : (tb.mergeName || null);
+
+    // 슬레이브 테이블: 그룹 색상 적용, 빈 상태로 처리
+    var c;
+    if (groupColor && isMerged) {
+      var _gr=parseInt(groupColor.slice(1,3),16), _gg=parseInt(groupColor.slice(3,5),16), _gb=parseInt(groupColor.slice(5,7),16);
+      c = {bg:'rgba('+_gr+','+_gg+','+_gb+',.18)', bd:groupColor, tx:groupColor};
+    } else {
+      c = tblColor(tb.st, tb.seatTime, isMerged);
+    }
     var sz = cardSz(tb.shape||'sq', tb.sz||'m', W, H);
     var x  = Math.max(0, Math.min(W-sz.w, Math.round(tb.px/100*W)));
     var y  = Math.max(0, Math.min(H-sz.h, Math.round(tb.py/100*H)));
@@ -717,21 +745,25 @@ inner.querySelectorAll('.tc').forEach(function(node){
     card.style.padding=(tb.shape==='bar')?'5px 9px':'8px 9px 7px';
     card.style.cursor=editMode?'grab':'pointer';
     card.style.boxShadow=editMode?'0 0 0 2px rgba(196,18,48,.3)':'';
+    if (isSlave && !editMode) card.style.opacity='0.82';
+    else card.style.opacity='';
     var wasDrag = card.classList.contains('drag');
     var cls = 'tc' + (wasDrag?' drag':'');
-    if (tb.mergeIds && tb.mergeIds.length) cls += ' merge-master';
+    if (isMaster) cls += ' merge-master';
+    if (isSlave)  cls += ' merge-slave';
     if (mergeSelectMode && isMergeSelectable(tb.id, mergeMasterId)) cls += ' merge-candidate';
     if (mergeSelectMode && mergeSelectedIds.indexOf(tb.id) >= 0) cls += ' merge-selected';
     card.className = cls;
     var isLightMode = document.body.classList.contains('light');
-    var dot = tb.st==='occupied'?'#2a9a5a':tb.st==='reserved'?'var(--blue)':(isMerged?'var(--indigo)':(isLightMode?'#c8c0b0':'#3a3835'));
+    var dot = tb.st==='occupied'?'#2a9a5a':tb.st==='reserved'?'var(--blue)':(isMerged?(groupColor||'var(--indigo)'):(isLightMode?'#c8c0b0':'#3a3835'));
     var elMin = tb.st==='occupied'?Math.floor((now-tb.seatTime)/60000):0;
     var assigned = getAssignedReservationsForTable(tb.id, activeDate);
     var assignedTotal = assigned.length;
     var extraTeams = Math.max(0, assignedTotal - 1);
     var mergedCount = (tb.mergeIds && tb.mergeIds.length) ? tb.mergeIds.length : 0;
     var key = tb.st+'|'+tb.g+'|'+(tb.seatTime||0)+'|'+elMin+'|'+(tb.res?JSON.stringify(tb.res):'')+
-              '|'+editMode+'|'+tb.shape+'|'+tb.sz+'|'+(isMerged?1:0)+'|'+assignedTotal+'|'+mergedCount;
+              '|'+editMode+'|'+tb.shape+'|'+tb.sz+'|'+(isMerged?1:0)+'|'+assignedTotal+'|'+mergedCount+
+              '|'+(isSlave?'s':'m')+'|'+(groupColor||'')+'|'+(groupName||'');
     if (cardCache[tb.id]===key) return;
     cardCache[tb.id]=key;
     var html='';
@@ -740,6 +772,25 @@ inner.querySelectorAll('.tc').forEach(function(node){
     var isOvertime = elapsed >= 5400000;
     var elapsedTxt = elapsed ? (isOvertime ? '+' : '') + fmtElapsed(elapsed) : '';
     var dotColor = editMode ? 'rgba(196,18,48,.5)' : dot;
+
+    // 슬레이브 테이블: 그룹 소속 표시
+    if (isSlave) {
+      var slaveNameColor = groupColor || '#a78bfa';
+      if (isBar) {
+        html = '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;height:100%">'
+             + '<div class="tc-name" style="color:'+slaveNameColor+'">'+esc(tb.n)+'</div>'
+             + '<div style="font-size:9px;color:'+slaveNameColor+';opacity:.8;text-align:right">🔗'+(groupName?esc(groupName):'묶음')+'</div>'
+             + '</div>';
+      } else {
+        html = '<div class="tc-hd">'
+             + '<div class="tc-name" style="color:'+slaveNameColor+'">'+esc(tb.n)+'</div>'
+             + '<div style="width:7px;height:7px;border-radius:50%;background:'+slaveNameColor+';flex-shrink:0;margin-top:2px"></div>'
+             + '</div>'
+             + '<div class="tc-info"><div style="font-size:10px;color:'+slaveNameColor+';font-weight:700;opacity:.85">🔗 '+(groupName?esc(groupName):'묶음')+'</div></div>';
+      }
+      card.innerHTML = html;
+      return;
+    }
 
     if (isBar) {
       html = '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;height:100%">'
@@ -755,9 +806,13 @@ inner.querySelectorAll('.tc').forEach(function(node){
         var priNameB = esc(tb.res&&tb.res.name||'');
         var priTimeB = esc(tb.res&&tb.res.time||'');
         var priGB = tb.res&&tb.res.g ? esc(String(tb.res.g))+'명' : '';
+        var priTagsB = (tb.res&&tb.res.tags&&tb.res.tags.length)
+          ? tb.res.tags.slice(0,2).map(function(tg){ return '<span class="tc-tag">'+esc(tg)+'</span>'; }).join('')
+          : '';
         html += '<div class="tc-bar-r">'
               + (priNameB ? '<div class="tc-strong" style="color:'+c.tx+'">'+priNameB+'</div>' : '')
               + '<div class="tc-meta" style="color:'+c.tx+'">'+(priTimeB || '시간 미정')+(priGB ? ' · '+priGB : '')+'</div>'
+              + (priTagsB ? '<div class="tc-tags">'+priTagsB+'</div>' : '')
               + '</div>';
       } else {
         html += '<div class="tc-dot" style="background:'+dotColor+'"></div>';
@@ -780,13 +835,18 @@ inner.querySelectorAll('.tc').forEach(function(node){
           var resName = esc(tb.res&&tb.res.name||'');
           var resTime = esc(tb.res&&tb.res.time||'');
           var resG = tb.res&&tb.res.g ? esc(String(tb.res.g))+'명' : '';
+          var resTags = (tb.res&&tb.res.tags&&tb.res.tags.length)
+            ? tb.res.tags.slice(0,2).map(function(tg){ return '<span class="tc-tag">'+esc(tg)+'</span>'; }).join('')
+            : '';
           html += '<div class="tc-info">'
                 + (resName ? '<div class="tc-info-row" style="color:'+c.tx+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+resName+'</div>' : '')
                 + '<div class="tc-info-sub" style="color:'+c.tx+'">'+(resTime || '시간 미정')+(resG ? ' · '+resG : '')+'</div>'
+                + (resTags ? '<div class="tc-tags">'+resTags+'</div>' : '')
                 + '</div>';
-        } else if (tb.mergeIds && tb.mergeIds.length) {
+        } else if (isMaster) {
+          var masterLabel = groupName ? esc(groupName) : getMergedNames(tb.id).join(' + ');
           html += '<div class="tc-info">'
-                + '<div style="font-size:9px;color:#a78bfa;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getMergedNames(tb.id).join(' + ')+'</div>'
+                + '<div style="font-size:10px;color:'+(groupColor||'#a78bfa')+';font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔗 '+masterLabel+'</div>'
                 + '</div>';
         }
       }
@@ -803,9 +863,11 @@ inner.querySelectorAll('.tc').forEach(function(node){
 
 // ── 드래그 ──
 function bindCard(card, tid) {
-  var dragging=false, lpt=null, tapAt=0;
+  var dragging=false, lpt=null, tapAt=0, lastMergeTapTime=0;
   card.addEventListener('touchstart', function(e){
-    tapAt=Date.now(); if(!editMode)return;
+    tapAt=Date.now();
+    if(!editMode && !mergeSelectMode) return;
+    if(!editMode) return; // mergeSelectMode는 touchend에서 처리
     var touch=e.touches[0];
     lpt=setTimeout(function(){ dragging=true; card.classList.add('drag'); startDrag(card,tid,touch.clientX,touch.clientY); },180);
   }, {passive:true});
@@ -816,7 +878,10 @@ function bindCard(card, tid) {
   card.addEventListener('touchend', function(){
     if(lpt){clearTimeout(lpt);lpt=null;}
     if(dragging){dragging=false;card.classList.remove('drag');snapCard(tid);saveData();return;}
-    if(mergeSelectMode && Date.now()-tapAt<280){ toggleMergeCandidate(tid); return; }
+    if(mergeSelectMode && Date.now()-tapAt<400){
+      lastMergeTapTime=Date.now();
+      toggleMergeCandidate(tid); return;
+    }
     if(!editMode && Date.now()-tapAt<280) openTableModal(tid);
   });
   card.addEventListener('mousedown', function(e){
@@ -826,7 +891,10 @@ function bindCard(card, tid) {
     document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
   });
   card.addEventListener('click', function(){
-    if (mergeSelectMode) { toggleMergeCandidate(tid); return; }
+    if (mergeSelectMode) {
+      if (Date.now()-lastMergeTapTime < 450) return; // 터치 후 중복 클릭 방지
+      toggleMergeCandidate(tid); return;
+    }
     openTableModal(tid);
   });
 }
@@ -999,9 +1067,14 @@ function teardownMergeToolbar() {
   if (bar) bar.remove();
 }
 function finishMergeSelection(save) {
+  if (save && mergeMasterId != null && mergeSelectedIds.length > 0) {
+    confirmAndSaveMerge();
+    return;
+  }
   if (save && mergeMasterId != null) {
+    // 선택된 테이블 없이 저장 → 기존 묶음 해제
     S.tables = S.tables.map(function(t){
-      if (t.id === mergeMasterId) return Object.assign({}, t, {mergeIds: mergeSelectedIds.slice()});
+      if (t.id === mergeMasterId) return Object.assign({}, t, {mergeIds:[], mergeName:undefined, mergeColor:undefined});
       return t;
     });
   }
@@ -1013,6 +1086,58 @@ function finishMergeSelection(save) {
   if (hint) hint.textContent='';
   if (save) saveData();
   renderAll();
+}
+function confirmAndSaveMerge() {
+  var ids = mergeSelectedIds.slice();
+  var masterId = mergeMasterId;
+  var master = S.tables.filter(function(t){ return t.id===masterId; })[0];
+  var defaultName = (master && master.mergeName) || getNextGroupName();
+  var defaultColor = (master && master.mergeColor) || randomVividColor();
+  var selectedColor = defaultColor;
+
+  var swatchesHtml = VIVID_COLORS.map(function(col){
+    var isSelected = col === defaultColor;
+    return '<button type="button" class="merge-color-swatch" data-color="'+col+'"'
+      +' style="background:'+col+';'+(isSelected?'outline:3px solid #fff;outline-offset:2px;':'')+'"></button>';
+  }).join('');
+
+  teardownMergeToolbar();
+  showModal('<div class="md-hd"><span class="md-title">묶음 그룹 설정</span><button class="md-x" id="mxbtn">×</button></div>'
+    +'<div class="mb">'
+    +'<div class="fg"><label class="fl">그룹 이름 <span style="color:var(--text3);font-weight:400">(비워두면 자동)</span></label>'
+    +'<input class="fi" id="merge-gname" placeholder="'+esc(defaultName)+'" value="'+esc(defaultName)+'"></div>'
+    +'<div class="fg"><label class="fl">그룹 색상</label>'
+    +'<div class="merge-color-row" id="merge-color-row">'+swatchesHtml+'</div></div>'
+    +'<div style="font-size:11px;color:var(--text3)">묶을 테이블: '+ids.map(function(mid){var t=S.tables.filter(function(x){return x.id===mid;})[0];return t?esc(t.n):'?';}).join(', ')+'</div>'
+    +'<button class="ab" style="background:var(--indigo);width:100%" id="merge-confirm-btn">묶기 완료</button>'
+    +'</div>');
+
+  document.getElementById('merge-color-row').querySelectorAll('.merge-color-swatch').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      selectedColor = this.getAttribute('data-color');
+      document.getElementById('merge-color-row').querySelectorAll('.merge-color-swatch').forEach(function(b){
+        b.style.outline=''; b.style.outlineOffset='';
+      });
+      this.style.outline='3px solid #fff';
+      this.style.outlineOffset='2px';
+    });
+  });
+
+  document.getElementById('merge-confirm-btn').addEventListener('click', function(){
+    var nm = (document.getElementById('merge-gname').value||'').trim() || defaultName;
+    S.tables = S.tables.map(function(t){
+      if (t.id === masterId) return Object.assign({}, t, {mergeIds: ids, mergeName: nm, mergeColor: selectedColor});
+      return t;
+    });
+    mergeSelectMode = false;
+    mergeMasterId = null;
+    mergeSelectedIds = [];
+    var hint=document.getElementById('ehint');
+    if (hint) hint.textContent='';
+    closeModal();
+    saveData();
+    renderAll();
+  });
 }
 function startMergeSelection(masterId) {
   var master = S.tables.filter(function(t){ return t.id===masterId; })[0];
@@ -1239,6 +1364,12 @@ function openSeatWaiter(wid){
 function openTableModal(tid){
   var tb = S.tables.filter(function(t){ return t.id === tid; })[0];
   if(!tb) return;
+
+  // 슬레이브 테이블 → 마스터 모달로 이동
+  if (isSlaveTbl(tid)) {
+    var master = getMasterOfSlave(tid);
+    if (master) { openTableModal(master.id); return; }
+  }
 
   if(editMode){
     showModal('<div class="md-hd"><span class="md-title">'+esc(tb.n)+' 테이블</span><button class="md-x" id="mxbtn">×</button></div>'
@@ -2365,6 +2496,8 @@ function unmergeTables(masterId) {
 
   const childIds = [...master.mergeIds];  // 복사
   delete master.mergeIds;                 // 마스터의 묶음 정보 제거
+  delete master.mergeName;
+  delete master.mergeColor;
 
   // 자식 테이블들 모두 빈 테이블로 초기화
   S.tables.forEach(t => {
@@ -2393,6 +2526,8 @@ function unmergeAllTables() {
   S.tables.forEach(t => {
     if (t.mergeIds && t.mergeIds.length > 0) {
       delete t.mergeIds;
+      delete t.mergeName;
+      delete t.mergeColor;
       changed = true;
     }
     if (t.isMergedChild) {
