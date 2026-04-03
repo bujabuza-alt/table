@@ -694,22 +694,7 @@ function renderCanvas() {
   var activeDate = floorDate || today();
   var displayTables = (floorDate === today()) ? S.tables : getVirtualTablesForDate(floorDate);
 
-// ✅ 1. 먼저 선언
-var visible = {};
-
-// ✅ 2. (슬레이브 테이블도 원래 위치에 표시 - 필터 제거)
-// 슬레이브 포함 모든 테이블 표시
-
-// ✅ 3. 그 다음 값 넣기
-displayTables.forEach(function(tb){
-  visible[tb.id] = true;
-});
-
-// ✅ 4. 마지막에 제거 처리
-inner.querySelectorAll('.tc').forEach(function(node){
-  var id = +(node.id || '').replace('tc','');
-  if (!visible[id]) node.remove();
-});
+  var visible = {};
   displayTables.forEach(function(tb){ visible[tb.id] = true; });
   inner.querySelectorAll('.tc').forEach(function(node){
     var id = +(node.id || '').replace('tc','');
@@ -1398,8 +1383,8 @@ function openTableModal(tid){
       unmergeBtn.innerHTML = '🔓 테이블 묶음 풀기';
       unmergeBtn.id = 'btn-unmerge';
 
-      // 모달의 .mb 영역을 찾아 버튼 추가
-      const mbArea = document.querySelector('#mdc .mb');
+      // 모달에 버튼 추가 (.mb가 있으면 거기에, 없으면 #mdc에 직접 추가)
+      const mbArea = document.querySelector('#mdc .mb') || document.querySelector('#mdc');
       if (mbArea) {
         mbArea.appendChild(unmergeBtn);
       }
@@ -2523,8 +2508,11 @@ function unmergeTables(masterId) {
 function unmergeAllTables() {
   let changed = false;
 
+  // 슬레이브 ID를 먼저 수집 (delete 전에)
+  var slaveIds = [];
   S.tables.forEach(t => {
     if (t.mergeIds && t.mergeIds.length > 0) {
+      t.mergeIds.forEach(mid => slaveIds.push(mid));
       delete t.mergeIds;
       delete t.mergeName;
       delete t.mergeColor;
@@ -2536,14 +2524,15 @@ function unmergeAllTables() {
     }
   });
 
-  // 묶음 해제된 테이블들은 모두 empty 상태로 초기화
-  S.tables.forEach(t => {
-    if (t.st === 'reserved' || t.st === 'occupied') return; // 예약/착석 중인 건 건드리지 않음
-    if (t.mergeIds === undefined) {  // 이전에 묶음이었던 흔적 정리
-      t.st = 'empty';
-      t.res = null;
-    }
-  });
+  // 슬레이브였던 테이블들만 empty로 초기화 (예약/착석 중인 건 건드리지 않음)
+  if (slaveIds.length > 0) {
+    S.tables.forEach(t => {
+      if (slaveIds.indexOf(t.id) >= 0 && t.st !== 'reserved' && t.st !== 'occupied') {
+        t.st = 'empty';
+        t.res = null;
+      }
+    });
+  }
 
   if (changed) {
     Object.keys(cardCache).forEach(key => cardCache[key] = '');
