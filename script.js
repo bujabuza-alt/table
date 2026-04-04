@@ -795,8 +795,8 @@ function renderCanvas() {
           ? tb.res.tags.slice(0,2).map(function(tg){ return '<span class="tc-tag">'+esc(tg)+'</span>'; }).join('')
           : '';
         html += '<div class="tc-bar-r">'
-              + (priNameB ? '<div class="tc-strong" style="color:'+c.tx+'">'+priNameB+'</div>' : '')
-              + '<div class="tc-meta" style="color:'+c.tx+'">'+(priTimeB || '시간 미정')+(priGB ? ' · '+priGB : '')+'</div>'
+              + (priNameB ? '<div style="font-size:15px;font-weight:900;color:'+c.tx+';line-height:1.2">'+priNameB+'</div>' : '')
+              + '<div style="font-size:12px;font-weight:700;color:'+c.tx+'">'+('<b>'+(priTimeB||'시간 미정')+'</b>')+(priGB ? ' · '+priGB : '')+'</div>'
               + (priTagsB ? '<div class="tc-tags">'+priTagsB+'</div>' : '')
               + '</div>';
       } else {
@@ -824,8 +824,8 @@ function renderCanvas() {
             ? tb.res.tags.slice(0,2).map(function(tg){ return '<span class="tc-tag">'+esc(tg)+'</span>'; }).join('')
             : '';
           html += '<div class="tc-info">'
-                + (resName ? '<div class="tc-info-row" style="color:'+c.tx+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+resName+'</div>' : '')
-                + '<div class="tc-info-sub" style="color:'+c.tx+'">'+(resTime || '시간 미정')+(resG ? ' · '+resG : '')+'</div>'
+                + (resName ? '<div style="font-size:16px;font-weight:900;color:'+c.tx+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2">'+resName+'</div>' : '')
+                + '<div style="font-size:13px;font-weight:700;color:'+c.tx+';margin-top:1px">'+('<b>'+(resTime||'시간 미정')+'</b>')+(resG ? ' · '+resG : '')+'</div>'
                 + (resTags ? '<div class="tc-tags">'+resTags+'</div>' : '')
                 + '</div>';
         } else if (isMaster) {
@@ -1447,10 +1447,13 @@ function showOccupied(tb){
     +'<div class="ir"><span class="il">착석 인원</span><span class="iv">'+tb.g+'명</span></div>'
     +'<div class="ir"><span class="il">착석 시간</span><span class="iv">'+fmtTime(tb.seatTime)+'</span></div>'
     +'<div class="ir"><span class="il">경과</span><span class="iv" style="color:'+(elapsed>5400000?'var(--red2)':'var(--text)')+'">'+fmtElapsed(elapsed)+'</span></div>'
-    +'</div>'+assignedList+'<button class="ab" style="background:var(--red);width:100%" id="bclr">퇴석 처리</button>');
+    +'</div>'+assignedList+'<button class="ab" style="background:var(--indigo);width:100%" id="bclr">✓ 완료 처리</button>');
   document.getElementById('bclr').addEventListener('click',function(){
     if(!S.daily)S.daily=[];
     S.daily.push({id:uid(),date:today(),type:'walkin',tname:tb.n,g:tb.g,seatTime:tb.seatTime,endTime:Date.now()});
+    if(tb.res && tb.res.resId) {
+      S.ress = S.ress.map(function(x){ return x.id==tb.res.resId ? Object.assign({},x,{st:'completed'}) : x; });
+    }
     S.tables=S.tables.map(function(t){return t.id===tb.id?Object.assign({},t,{st:'empty',g:0,seatTime:null,res:null}):t;});
     closeModal(); saveData(); renderAll();
   });
@@ -1652,8 +1655,9 @@ function openRvDetail(rid){
     +['arrived','completed','noshow'].map(function(s){return '<button style="flex:1;padding:8px 0;border:none;border-radius:8px;background:'+(sc[s]?sc[s][1]:'var(--surf2)')+';color:'+(sc[s]?sc[s][0]:'var(--text2)')+';font-weight:700;font-size:12px;cursor:pointer;font-family:inherit" data-st="'+s+'">'+sml[s]+'</button>';}).join('')+'</div>'
     +(!tbl?'<button class="ab" style="background:var(--blue);width:100%;margin-bottom:7px" id="bassign">🪑 테이블 배정</button>':'<button class="ab" style="background:var(--surf3);color:var(--text2);width:100%;margin-bottom:7px" id="bunassign">배정 해제</button>')
     +(r.phone?'<button class="ab" style="background:var(--surf3);color:var(--text2);width:100%;margin-bottom:7px" id="bcustinfo">👤 고객 정보</button>':'')
+    +((r.st==='completed'||r.st==='noshow')?'<button class="ab" style="background:var(--green);width:100%;margin-bottom:7px" id="brestore">🔄 예약 복구 (확정으로 변경)</button>':'')
     +'<div class="abs"><button class="ab" style="background:var(--indigo)" id="bedit2">✏️ 수정</button>'
-    +'<button class="ab" style="background:var(--red)" id="bcanc">삭제</button></div>');
+    +'<button class="ab" style="background:var(--red)" id="bcanc">완전 삭제</button></div>');
   document.getElementById('mdc').querySelectorAll('[data-st]').forEach(function(btn){
     btn.addEventListener('click',function(){
       var st=this.getAttribute('data-st');
@@ -1672,6 +1676,11 @@ function openRvDetail(rid){
   });
   var bci=document.getElementById('bcustinfo');
   if(bci) bci.addEventListener('click',function(){closeModal();openCustInfo(r.phone,r.nm);});
+  var brestore=document.getElementById('brestore');
+  if(brestore) brestore.addEventListener('click',function(){
+    S.ress=S.ress.map(function(x){return x.id==rid?Object.assign({},x,{st:'confirmed'}):x;});
+    saveData(); closeModal(); renderReservations();
+  });
   document.getElementById('bedit2').addEventListener('click',function(){closeModal();openEditRv(rid);});
   document.getElementById('bcanc').addEventListener('click',function(){
     if(!confirm('예약을 삭제할까요?'))return;
