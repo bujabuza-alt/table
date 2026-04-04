@@ -1,19 +1,14 @@
 // ── Service Worker ────────────────────────────────────────
-// index.html은 캐시하지 않음 → GitHub 배포 즉시 반영
-// 버전 번호 수동 변경 불필요
-var CACHE_NAME = 'table-app-static-v1';
-
-// 캐시할 파일: index.html 제외, 정적 자산만
-var CACHE_FILES = [
-  './manifest.json'
-];
+// 모든 로컬 파일 → 네트워크 우선, 오프라인 시 캐시 폴백
+// CACHE_NAME을 올려서 기존 캐시(v1) 강제 삭제
+var CACHE_NAME = 'table-app-v2';
 
 // ── 설치 ─────────────────────────────────────────────────
 self.addEventListener('install', function(event) {
   self.skipWaiting(); // 즉시 활성화
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(CACHE_FILES).catch(function() {});
+      return cache.addAll(['./manifest.json']).catch(function() {});
     })
   );
 });
@@ -26,7 +21,7 @@ self.addEventListener('activate', function(event) {
         keys.filter(function(key) {
           return key !== CACHE_NAME;
         }).map(function(key) {
-          return caches.delete(key);
+          return caches.delete(key); // 구버전 캐시(v1 등) 전부 삭제
         })
       );
     }).then(function() {
@@ -47,31 +42,20 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // HTML 파일은 항상 네트워크 우선 → 캐시 안 함
-  // → index.html이 바뀌면 바로 반영됨
-  if (event.request.headers.get('accept') &&
-      event.request.headers.get('accept').includes('text/html')) {
-    event.respondWith(
-      fetch(event.request).catch(function() {
-        // 오프라인일 때만 캐시에서 서빙
-        return caches.match('./index.html');
-      })
-    );
-    return;
-  }
-
-  // 나머지(manifest, 아이콘 등)는 캐시 우선
+  // 모든 로컬 리소스 → 네트워크 우선, 오프라인 시 캐시 폴백
+  // script.js, style.css, index.html, manifest.json 모두 동일하게 처리
   event.respondWith(
-    caches.match(event.request).then(function(cached) {
-      return cached || fetch(event.request).then(function(response) {
-        if (response && response.status === 200) {
-          var clone = response.clone();
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(event.request, clone);
-          });
-        }
-        return response;
-      });
+    fetch(event.request).then(function(response) {
+      if (response && response.status === 200) {
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(event.request, clone);
+        });
+      }
+      return response;
+    }).catch(function() {
+      // 오프라인일 때만 캐시에서 서빙
+      return caches.match(event.request);
     })
   );
 });
