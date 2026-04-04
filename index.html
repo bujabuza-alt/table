@@ -64,6 +64,7 @@
     <button class="tab on" id="t1">🪑 홀 현황</button>
     <button class="tab" id="t2">📋 예약 관리</button>
     <button class="tab" id="t3">👤 손님</button>
+    <button class="tab" id="t4">📦 재고</button>
   </div>
   <div id="body">
     <div id="sb">
@@ -129,6 +130,27 @@
         <button class="bg" id="btn-cust-notion" style="font-size:11px;padding:5px 9px;white-space:nowrap;flex-shrink:0">☁ 노션</button>
       </div>
       <div id="custlist"></div>
+    </div>
+    <!-- 재고 관리 탭 -->
+    <div id="stock">
+      <div id="stock-top">
+        <div id="stock-search-row">
+          <input class="rv-srch" id="stock-srch" type="search" placeholder="상품명 검색…">
+          <button class="bg" id="stock-btn-order" style="font-size:11px;padding:5px 9px;white-space:nowrap;flex-shrink:0">📋 발주</button>
+          <button class="bg" id="stock-btn-sort" style="font-size:11px;padding:5px 9px;white-space:nowrap;flex-shrink:0">↕ 정렬</button>
+          <button class="bg" id="stock-btn-csv" style="font-size:11px;padding:5px 9px;white-space:nowrap;flex-shrink:0">↓ CSV</button>
+          <button class="bp" id="stock-btn-add">+ 추가</button>
+        </div>
+        <div id="stock-cats"></div>
+        <div id="stock-chips"></div>
+      </div>
+      <div id="stock-stats"></div>
+      <div id="stock-list"></div>
+      <div id="stock-order-bar" style="display:none">
+        <span id="stock-order-count"></span>
+        <button class="bg" id="stock-order-copy">📋 복사</button>
+        <button class="bg" id="stock-order-cancel">취소</button>
+      </div>
     </div>
   </div>
 </div>
