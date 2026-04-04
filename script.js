@@ -446,9 +446,9 @@ function getVirtualTablesForDate(date) {
     }
     if(res){
       var ro={name:res.nm,g:res.g,time:res.time,date:res.date,phone:res.phone,memo:res.memo,tags:res.tags,resId:res.id};
-      return Object.assign({},tb,{st:'reserved',res:ro,seatTime:null});
+      return Object.assign({},tb,{st:'reserved',res:ro,seatTime:null,mergeIds:[],mergeName:undefined,mergeColor:undefined});
     }
-    return Object.assign({},tb,{st:'empty',g:0,seatTime:null,res:null});
+    return Object.assign({},tb,{st:'empty',g:0,seatTime:null,res:null,mergeIds:[],mergeName:undefined,mergeColor:undefined});
   });
 }
 function mkTable(t) {
@@ -2277,14 +2277,12 @@ function openTagMgr(){
 
 // ── 날짜 동기화 ──
 function syncToday(){
-  var td = today();        // 오늘 날짜
-  var currentFloorDate = floorDate || td;   // 현재 보고 있는 날짜 (floor-nav 사용 시)
+  var td = today();        // 오늘 실제 날짜 (시계 기준)
   var changed = false;
 
-  // ==================== 날짜가 바뀌었을 때 모든 테이블 묶음 자동 해제 ====================
-  if (currentFloorDate !== lastDate) {
-    console.log('날짜 변경 감지: ' + lastDate + ' → ' + currentFloorDate);
-
+  // 자정에 실제 날짜가 바뀌었을 때만 묶음 해제
+  // floor-nav로 다른 날짜를 보는 것은 S.tables를 수정하지 않음
+  if (td !== lastDate) {
     S.tables.forEach(function(t) {
       if (t.mergeIds && t.mergeIds.length > 0) {
         delete t.mergeIds;
@@ -2295,25 +2293,12 @@ function syncToday(){
         changed = true;
       }
     });
-
-    // 빈 테이블들은 empty로 초기화
-    S.tables.forEach(function(t) {
-      if (t.st !== 'reserved' && t.st !== 'occupied') {
-        t.st = 'empty';
-        t.res = null;
-      }
-    });
-
-    if (changed) {
-      console.log('✅ 날짜 변경으로 모든 테이블 묶음이 자동 해제되었습니다.');
-    }
-
-    lastDate = currentFloorDate;   // 현재 보고 있는 날짜로 업데이트
+    lastDate = td;
   }
 
-  // ==================== 기존 로직 (예약 → 착석 자동 적용) ====================
+  // 오늘 날짜의 확정 예약만 → 테이블 예약 상태로 자동 적용
   S.ress.forEach(function(r){
-    if(r.date === currentFloorDate && r.st === 'confirmed' && r.tableId){
+    if(r.date === td && r.st === 'confirmed' && r.tableId){
       var tbl = S.tables.filter(function(t){ return t.id === r.tableId; })[0];
       if(tbl && tbl.st === 'empty'){
         var ro = {
@@ -2369,11 +2354,10 @@ document.getElementById('mo').addEventListener('touchend', function(e){ if(e.tar
 // 마지막 날짜 초기화 (페이지 로드 시 오늘 날짜로 확실히 설정)
 var lastDate = today();
 
-// floor-nav 날짜 변경 시에도 syncToday 호출되도록 보강
+// floor-nav 날짜 변경 시 렌더링 보강 (syncToday는 호출하지 않음 - S.tables 수정 방지)
 var originalRenderFloorNav = renderFloorNav;
 renderFloorNav = function(){
   originalRenderFloorNav();
-  setTimeout(syncToday, 100);   // 날짜 변경 후 syncToday 호출
 };
 
 // ── 1초마다 체크 ──
@@ -2382,11 +2366,9 @@ setInterval(function(){
 
   var nd = today();
 
-  // 날짜가 바뀌었는지 체크
+  // 자정에 실제 날짜가 바뀌었는지 체크
   if(nd !== lastDate){
-    console.log('날짜 변경 감지: ' + lastDate + ' → ' + nd);
-    lastDate = nd;
-    syncToday();        // ← 묶음 해제 포함
+    syncToday();        // 내부에서 lastDate 업데이트 + 묶음 해제 포함
     renderAll();
     return;
   }
